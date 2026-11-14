@@ -1,0 +1,224 @@
+# yaml-language-server: $schema=../../schema/trip.schema.json
+# SYNTHETIC EXAMPLE: fictional people, peaks, huts and track. Used to check that the
+# repository builds a report that looks right. Regenerate the data with generate.py.
+schema_version: 1
+languages: [lt, en]
+
+title:
+  lt: Aušros grandinė
+  en: The Dawn Traverse
+subtitle:
+  lt: Penkių viršūnių žygis virš 4000 m
+  en: Five summits above 4000 m
+cover:
+  image: photos/cover.jpg
+  kicker:
+    lt: Įkopimo ataskaita
+    en: Climb report
+
+start_date: 2025-08-10
+end_date: 2025-08-14
+timezone: Europe/Zurich
+region:
+  lt: Aušros Alpės (išgalvotas rajonas)
+  en: Dawn Alps (fictional range)
+country:
+  lt: Šveicarija
+  en: Switzerland
+kind:
+  lt: Techninė / kalnų žygis
+  en: Technical / mountain traverse
+
+participants:
+  - name: Jonas Jonaitis
+    experience: [Matterhorn (4478 m), Mont Blanc (4805 m), Kazbek (5054 m)]
+    contact: example@example.com
+  - name: Rūta Rutaitė
+    experience: [Weissmies (4017 m), Dom (4545 m), Aconcagua (6961 m)]
+
+peaks:
+  - {name: Ledo smailė, elevation_m: 3987, lat: 46.53503, lon: 8.07321}
+  - {name: Žaibo kupolas, elevation_m: 4105, lat: 46.53692, lon: 8.08731}
+  - {name: Audros ragas, elevation_m: 4168, lat: 46.54312, lon: 8.09905}
+  - {name: Sidabro kalnas, elevation_m: 4010, lat: 46.55929, lon: 8.06773}
+  - {name: Aušros viršūnė, elevation_m: 4231, lat: 46.56737, lon: 8.07948}
+  - {name: Vėjo dantis, elevation_m: 4087, lat: 46.57734, lon: 8.10688}
+
+summary:
+  - label: {lt: Maršrutas, en: Route}
+    text:
+      lt: >-
+        Penkių dienų žygis per šešias išgalvotas viršūnes, kiekviena aukštesnė nei 3980 m.
+        Pradėjome ir baigėme slėnio kaimelyje, dvi naktis praleidome trobelėse, vieną – bivake ant
+        kuolo, vieną – dar vienoje trobelėje.
+      en: >-
+        A five-day traverse over six fictional summits, each above 3980 m. We started and finished
+        in the valley village, spending two nights in huts, one on a bivouac on the col and one
+        in a third hut.
+  - label: {lt: Sąlygos, en: Conditions}
+    text:
+      lt: Stabilus oras, šaltos naktys, vienintelė audra – paskutinės dienos rytą.
+      en: Stable weather, cold nights, and a single storm on the morning of the last day.
+  - label: {lt: Svarbiausia, en: Highlights}
+    text:
+      lt: >-
+        **Aušros viršūnė** (4231 m) – aukščiausias taškas; **Audros ragas** buvo sudėtingiausia
+        atkarpa. Iš viso įveikėme apie 4 900 m pakilimo.
+      en: >-
+        **Aušros viršūnė** (4231 m) was the highest point and **Audros ragas** the hardest
+        section. In total we climbed about 4,900 m.
+
+routes:
+  - name: Ledo grandinė
+    grade: "AD, III, 700 m"
+    sections:
+      - {name: Ledo smailė, grade: PD, pitches: "1", leader: Jonas}
+      - {name: Žaibo kupolas, grade: PD+, pitches: "2", leader: {lt: Pakaitomis, en: Alternating}}
+      - name: Audros ragas
+        grade: AD
+        pitches: "3"
+        leader: Rūta
+        note: {lt: Trapūs akmenys viršutinėje dalyje, en: Loose rock on the upper part}
+  - name: Aušros keteros
+    grade: "D−, IV, 900 m"
+    sections:
+      - {name: Sidabro kalnas, grade: AD, pitches: "2", leader: Rūta}
+      - {name: Aušros viršūnė, grade: D−, pitches: "4", leader: {lt: Pakaitomis, en: Alternating}}
+      - {name: Vėjo dantis, grade: AD, pitches: "1", leader: Jonas}
+
+tactics:
+  lt: >-
+    Lipome susijungę virve su slenkančia sauga, techninėse vietose – su apatine sauga. Nusileidimai
+    – laipiojimo batais, ant ledyno – kramplių. Prie pagrindinės įrangos buvo ir *kiekvienam
+    dalyviui po vieną lengvą ledkirtį*.
+  en: >-
+    We moved roped together with running protection, and with fixed belays on the technical
+    parts. Rock sections were climbed in approach shoes, glacier sections in crampons. Each
+    participant also carried *one lightweight ice axe*.
+gear:
+  - {lt: "1 × 60 m virvė", en: "1 × 60 m rope"}
+  - {lt: "6 × kamalotai (#0,4–3)", en: "6 × cams (#0.4–3)"}
+  - {lt: "5 × riešutai (#5–11)", en: "5 × nuts (#5–11)"}
+  - {lt: "4 × ledo sraigtai", en: "4 × ice screws"}
+
+conditions:
+  lt: >-
+    Slėnyje dieną buvo apie 26 °C, 4000 m aukštyje – apie 0–5 °C. Pirmąsias dvi dienas sniego
+    ant keteros beveik nebuvo, trečią dieną nuo ryto pasnigo kelis centimetrus, o paskutinį rytą
+    kelias valandas siautė audra.
+  en: >-
+    The valley was around 26 °C by day and 0–5 °C at 4000 m. There was almost no snow on the
+    ridges for the first two days, a few centimetres fell on the morning of day three, and a
+    storm raged for a few hours on the last morning.
+
+accommodation:
+  - {date: 2025-08-10, place: Alfos trobelė, kind: {lt: Trobelė, en: Hut}, altitude_m: 2850}
+  - date: 2025-08-11
+    place: Beta trobelė
+    kind: {lt: Trobelė, en: Hut}
+    altitude_m: 3350
+    note: {lt: Maistas ir pusryčiai, en: Meals and breakfast}
+  - date: 2025-08-12
+    place: Perėjos bivakas
+    kind: {lt: Bivakas, en: Bivouac}
+    altitude_m: 3900
+  - {date: 2025-08-13, place: Gama trobelė, kind: {lt: Trobelė, en: Hut}, altitude_m: 3100}
+support:
+  lt: Maistą nešėmės patys; trobelėse papildomai valgėme pusryčius ir vakarienes.
+  en: We carried most of our own food and had breakfast and dinner in the huts.
+
+acclimatisation:
+  lt: >-
+    Papildomų aklimatizacinių kopimų nedarėme, nes likus savaitei jau buvome įkopę į keletą
+    keturtūkstantininkų.
+  en: >-
+    We made no extra acclimatisation climbs, as we had already been up several four-thousanders
+    in the week before.
+
+days:
+  - date: 2025-08-10
+    title: {lt: Slėnis – Alfos trobelė, en: Valley – Alpha hut}
+    text:
+      lt: >-
+        Išėjome 9:00, kai slėnyje jau buvo karšta. Pirmoji dalis – ilgas miško takas, vėliau
+        tekėjo upelis, kurį perbridome basomis kojomis.
+
+
+        Į trobelę atėjome 16:30. Vakarienė buvo paprasta, bet skani, o vakare ilgai žiūrėjome į
+        rytdienos maršrutą.
+      en: >-
+        We left at 9:00 with the valley already hot. The first part was a long forest trail,
+        then a stream that we crossed barefoot.
+
+
+        We reached the hut at 16:30. Dinner was simple but good, and in the evening we studied
+        the next day's route for a long time.
+  - date: 2025-08-11
+    title: {lt: Ledo grandinė, en: The ice chain}
+    text:
+      lt: >-
+        Startavome 3:30. **Ledo smailė** pasiekta 8:10, **Žaibo kupolas** – 11:30. Audros rage
+        akmenys buvo trapūs, tad lipome atsargiai ir lėtai.
+
+
+        Nusileidę į Beta trobelę, valgėme dvigubą porciją – ir užmigome nespėję išgerti arbatos.
+      en: >-
+        We started at 3:30. **Ledo smailė** was reached at 8:10 and **Žaibo kupolas** at 11:30.
+        The rock on Audros ragas was loose, so we climbed slowly and carefully.
+
+
+        Back at Beta hut we ate a double portion, and fell asleep before the tea was finished.
+  - date: 2025-08-12
+    title: {lt: Aušros viršūnė, en: Aušros viršūnė}
+    text:
+      lt: >-
+        Ryto šaltis buvo stiprus, bet oras idealus. **Sidabro kalnas** – 7:30, o **Aušros
+        viršūnė** – 11:20. Viršūnėje, aukščiausiame ekspedicijos taške, praleidome dvidešimt
+        minučių.
+
+
+        Naktį praleidome bivake ant perėjos, po pačiomis žvaigždėmis.
+      en: >-
+        The morning was bitterly cold but the weather perfect. **Sidabro kalnas** at 7:30, and
+        **Aušros viršūnė** at 11:20. We spent twenty minutes on the highest point of the trip.
+
+
+        We bivouacked on the col, right under the stars.
+  - date: 2025-08-13
+    title: {lt: Vėjo dantis, en: Vėjo dantis}
+    text:
+      lt: >-
+        Ankstyvas startas, trumpas nuolydis ir ilga ketera iki **Vėjo danties** (9:00).
+        Po to – ilgas nusileidimas į Gama trobelę, kur šventėme geriausią dieną.
+      en: >-
+        An early start, a short descent and a long ridge to **Vėjo dantis** (9:00), followed by
+        a long descent to Gamma hut, where we celebrated the best day of the trip.
+  - date: 2025-08-14
+    title: {lt: Žemyn į slėnį, en: Down to the valley}
+    text:
+      lt: >-
+        Ryte audra privertė palaukti kelias valandas, o paskui greitai nusileidome į slėnį.
+        Kaimelyje buvome 12:30.
+      en: >-
+        A storm made us wait for a few hours in the morning, and then we descended quickly to the
+        valley. We were back in the village at 12:30.
+
+gpx: track.gpx
+map:
+  basemap: plain
+  color_by: none
+
+photos:
+  - {file: photos/approach.jpg, size: half, caption: {lt: Takas slėnyje pirmąją dieną., en: The trail in the valley on the first day.}}
+  - {file: photos/hut-alpha.jpg, size: half, caption: {lt: Saulėlydis prie Alfos trobelės., en: Sunset at Alpha hut.}}
+  - {file: photos/ledo-smaile.jpg, size: full, caption: {lt: Ledo smailė ankstyvą rytą., en: Ledo smailė in the early morning.}}
+  - {file: photos/ridge.jpg, size: half, caption: {lt: Žaibo kupolo ketera., en: The ridge of Žaibo kupolas.}}
+  - {file: photos/glacier.jpg, size: half, caption: {lt: Ledynas po Audros ragu., en: The glacier below Audros ragas.}}
+  - {file: photos/sunrise-col.jpg, size: half, caption: {lt: Saulėtekis ant perėjos., en: Sunrise on the col.}}
+  - {file: photos/ausros-virsune.jpg, size: half, caption: {lt: Aušros viršūnė., en: Aušros viršūnė.}}
+  - {file: photos/bivouac.jpg, size: half, caption: {lt: Bivakas ant perėjos., en: The bivouac on the col.}}
+  - {file: photos/storm.jpg, size: half, caption: {lt: Audra paskutinį rytą., en: The storm on the last morning.}}
+  - {file: photos/descent.jpg, size: full, caption: {lt: Nusileidimas į slėnį., en: The descent to the valley.}}
+
+references:
+  - "Fictional Alpine Club (2024). A guide to the Dawn Alps. Synthetic Press."
