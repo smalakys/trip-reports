@@ -1,6 +1,6 @@
 """Turn a trip + analysis into a language-specific *document model*: a flat list of blocks.
 
-The Typst template is a dumb renderer of these blocks; every decision about *what* appears in
+The ReportLab renderer (render.py) is a dumb renderer of these blocks; every decision about *what* appears in
 the report (sections, tables, wording, number formats) is made here and is unit-testable.
 """
 
@@ -39,7 +39,7 @@ def rich(text: str) -> list[list[dict]]:
 
 @dataclass
 class Assets:
-    """Files the builder has prepared, relative to the Typst build folder."""
+    """Files the builder has prepared, relative to the build folder."""
 
     cover: str
     cover_px: tuple[int, int]
@@ -47,6 +47,8 @@ class Assets:
     route_map_ratio: float
     profile: str
     profile_ratio: float
+    route_map_under: str | None = None     # basemap image drawn beneath the vector route map
+    map_attribution: str | None = None
     acc: str | None = None
     acc_ratio: float = 0.0
     acc_delta_m: float = 0.0
@@ -61,6 +63,23 @@ def _kv_table(loc: Locale, rows):
     cols = [{"header": "", "align": "left", "width": 1.0},
             {"header": "", "align": "left", "width": 2.6}]
     return _table(cols, rows, key_first=True)
+
+
+_DAY_TOKEN = re.compile(r"\{(distance|ascent|descent|duration|hours|max_alt|min_alt)\}")
+
+
+def fill_day_numbers(text: str, stats, loc: Locale) -> str:
+    """Replace {distance}, {ascent}, {descent}, {duration}, {hours}, {max_alt}, {min_alt} in a day's text
+    with that day's figures from the track, so the diary and the tables never disagree."""
+    if stats is None:
+        return text
+    values = {
+        "distance": loc.km(stats.distance_m), "ascent": loc.metres(round(stats.ascent_m, -1)),
+        "descent": loc.metres(round(stats.descent_m, -1)), "duration": loc.duration(stats.duration),
+        "hours": loc.hours(stats.duration), "max_alt": loc.metres(stats.max_alt_m),
+        "min_alt": loc.metres(stats.min_alt_m),
+    }
+    return _DAY_TOKEN.sub(lambda m: values[m.group(1)], text)
 
 
 def badge(grade: str, system: str | None = None, key: bool = False) -> dict:
@@ -88,18 +107,23 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
 
     # ---- title page data -------------------------------------------------------------------
     highest = max((p.elevation_m for p in trip.peaks), default=t["max_alt_m"])
-    stats = [
-        {"value": loc.num(highest), "unit": ui("meters"), "label": ui("highest_point"), "accent": True},
-        {"value": loc.gain(t["ascent_m"]).replace(f"{ui('meters')}", "").strip(),
-         "unit": ui("meters"), "label": ui("ascent"), "accent": False},
-        {"value": loc.num(t["distance_m"] / 1000, 1), "unit": ui("kilometers"),
-         "label": ui("distance"), "accent": False},
-    ]
-    if trip.peaks:
-        stats.append({"value": str(len(trip.peaks)), "unit": "", "label": ui("peaks"), "accent": False})
-    stats.append({"value": str(n_days), "unit": "", "label": ui("days_stat"), "accent": False})
+    available = {
+        "highest_point": (loc.num(highest), ui("meters"), ui("highest_point")),
+        "ascent": (loc.gain(t["ascent_m"]).replace(f"{ui('meters')}", "").strip(), ui("meters"), ui("ascent")),
+        "descent": (loc.gain(-t["descent_m"]).replace(f"{ui('meters')}", "").strip(), ui("meters"),
+                    ui("descent")),
+        "distance": (loc.num(t["distance_m"] / 1000, 1), ui("kilometers"), ui("distance")),
+        "peaks": (str(len(trip.peaks)), "", ui("peaks")),
+        "days": (str(n_days), "", ui("days_stat")),
+        "net_time": (loc.duration(t["net_time"]), "", ui("net_time")),
+        "vertical_range": (loc.num(round(t["max_alt_m"] - t["min_alt_m"])), ui("meters"),
+                           ui("vertical_range")),
+    }
+    stats = [{"value": available[k][0], "unit": available[k][1], "label": available[k][2],
+              "accent": i == 0} for i, k in enumerate(trip.cover_stats)
+             if k != "peaks" or trip.peaks]
     region = ", ".join(x for x in (L(trip.region), L(trip.country)) if x)
-    badges = [badge(g.grade, g.grade_system, key=i == 0) for i, g in enumerate(trip.routes) if g.grade]
+    badges = [badge(L(trip.kind), None, key=True)] if trip.kind else []   # the report's category
     cover = {
         "image": assets.cover,
         "association": ui("association"),
@@ -108,17 +132,15 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         "title": title,
         "subtitle": L(trip.subtitle),
         "badges": badges,
-        "outcome": L(trip.outcome),
         "stats": stats,
+        "meta": [{"k": ui("date"), "v": loc.date_range(trip.start_date, trip.end_date)}] + (
+            [{"k": ui("participants"), "v": ", ".join(p.name for p in trip.participants)}]
+            if trip.participants else []),
     }
 
-    # ---- summary ---------------------------------------------------------------------------
-    if trip.summary:
-        h1(ui("summary"), newpage=True)
-        blocks.append({"type": "labeled", "items": [
-            {"label": L(s.label), "paras": rich(L(s.text))} for s in trip.summary]})
+    # ---- contents --------------------------------------------------------------------------
     if trip.show_contents:
-        blocks.append({"type": "contents", "title": ui("contents"), "newpage": not trip.summary})
+        blocks.append({"type": "contents", "title": ui("contents"), "newpage": True})
 
     # ---- general information ---------------------------------------------------------------
     h1(ui("general"), newpage=True)
@@ -136,30 +158,25 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         if person.contact:
             lines.append(person.contact)
         people.append("\n".join(lines))
-    rows.append([ui("participants"), "\n\n".join(people)])
+    if people:
+        rows.append([ui("participants"), "\n\n".join(people)])
     blocks.append(_kv_table(loc, rows))
 
     # ---- route information -----------------------------------------------------------------
     h1(ui("route"))
-    numbers = [
-        [ui("min_max_alt"), f"{loc.metres(t['min_alt_m'])} – {loc.metres(t['max_alt_m'])}"],
-        [ui("vertical_range"), loc.metres(t["max_alt_m"] - t["min_alt_m"])],
-        [ui("total_distance"), loc.km(t["distance_m"])],
-        [ui("total_ascent"), loc.gain(t["ascent_m"])],
-        [ui("total_descent"), loc.gain(-t["descent_m"])],
-        [ui("net_time"), loc.duration(t["net_time"])],
-        [ui("days_label"), str(n_days)],
-    ]
-    h2(ui("route_numbers"))
-    blocks.append(_kv_table(loc, numbers))
+    if trip.route_description:
+        h2(ui("route_description"))
+        blocks.append({"type": "paras", "paras": rich(L(trip.route_description))})
 
     if trip.routes:
         h2(ui("route_sections"))
         has_pitches = any(s.pitches for g in trip.routes for s in g.sections)
         has_leader = any(s.leader for g in trip.routes for s in g.sections)
         has_note = any(s.note for g in trip.routes for s in g.sections)
-        cols = [{"header": ui("section"), "align": "left", "width": 2.0},
-                {"header": ui("grade"), "align": "left", "width": 1.45}]
+        has_grade = any(s.grade for g in trip.routes for s in g.sections)
+        cols = [{"header": ui("section"), "align": "left", "width": 2.0}]
+        if has_grade:
+            cols.append({"header": ui("grade"), "align": "left", "width": 1.45})
         if has_pitches:
             cols.append({"header": ui("pitches"), "align": "left", "width": 1.0})
         if has_leader:
@@ -168,11 +185,14 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             cols.append({"header": ui("notes"), "align": "left", "width": 2.2})
         trows = []
         for g in trip.routes:
-            trows.append([{"group": True, "span": len(cols), "text": g.name,
-                           "badge": badge(g.grade, g.grade_system, key=True) if g.grade else None,
-                           "note": L(g.note)}])
+            if len(trip.routes) > 1 or g.grade or g.note:   # a lone, unadorned route needs no heading row
+                trows.append([{"group": True, "span": len(cols), "text": g.name,
+                               "badge": badge(g.grade, g.grade_system, key=True) if g.grade else None,
+                               "note": L(g.note)}])
             for s in g.sections:
-                row = [s.name, {"badge": badge(s.grade)} if s.grade else ""]
+                row = [s.name]
+                if has_grade:
+                    row.append({"badge": badge(s.grade)} if s.grade else "")
                 if has_pitches:
                     row.append(s.pitches or "")
                 if has_leader:
@@ -246,25 +266,27 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             blocks.append({"type": "paras", "paras": rich(L(trip.acclimatisation))})
         for d in sorted(trip.days, key=lambda d: d.date):
             h2(L(d.title), prefix=loc.short_date(d.date))
-            blocks.append({"type": "paras", "paras": rich(L(d.text)), "diary": True})
+            by_date = next((x for x in an.days if x.date == d.date), None)
+            blocks.append({"type": "paras", "paras": rich(fill_day_numbers(L(d.text), by_date, loc)),
+                           "diary": True})
 
     # ---- figures ---------------------------------------------------------------------------
     h1(ui("figures"), newpage=True)
     days_txt = loc.days(n_days)
-    source_map = ui("source_tiles") if trip.map.basemap == "tiles" else ui("source_track")
+    source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
     blocks.append({
         "type": "figure",
         "headline": loc.fig("route_title").format(distance=loc.km(t["distance_m"], 0), days=days_txt),
         "subtitle": loc.fig("route_subtitle"),
-        "image": assets.route_map, "ratio": assets.route_map_ratio,
-        "source": source_map, "caption": loc.fig("route_caption"),
+        "image": assets.route_map, "under": assets.route_map_under, "ratio": assets.route_map_ratio,
+        "source": source_map, "caption": "",
     })
     blocks.append({
         "type": "figure",
         "headline": loc.fig("profile_title").format(ascent=loc.gain(t["ascent_m"]), days=days_txt),
         "subtitle": loc.fig("profile_subtitle"),
         "image": assets.profile, "ratio": assets.profile_ratio,
-        "source": ui("source_gpx"), "caption": loc.fig("profile_caption"),
+        "source": "", "caption": "",
     })
     if assets.acc:
         blocks.append({
@@ -272,7 +294,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             "headline": loc.fig("acc_title").format(delta=loc.metres(assets.acc_delta_m)),
             "subtitle": loc.fig("acc_subtitle"),
             "image": assets.acc, "ratio": assets.acc_ratio,
-            "source": ui("source_gpx"), "caption": loc.fig("acc_caption"),
+            "source": "", "caption": loc.fig("acc_caption"),
         })
 
     # ---- photos ----------------------------------------------------------------------------

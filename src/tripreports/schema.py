@@ -73,6 +73,13 @@ class Accommodation(_Model):
     note: LText | None = None
 
 
+class Break(_Model):
+    """A long daytime stop worth naming on the elevation profile, e.g. a hut."""
+
+    date: dt.date
+    place: str
+
+
 class Day(_Model):
     date: dt.date
     title: LText
@@ -87,17 +94,36 @@ class Photo(_Model):
     )
 
 
-class Summary(_Model):
-    label: LText
-    text: LText
+class Calibration(_Model):
+    """Totals to trust over the ones computed from the GPX track.
+
+    GPS altitude is noisy, so computed ascent is rarely exact. Give the figures you trust (a
+    guidebook, or a service that corrects elevation) and every day's distance, ascent and
+    descent is scaled by the same factor, so tables and rows still add up.
+    """
+
+    distance_km: float | None = None
+    ascent_m: float | None = None
+    descent_m: float | None = Field(
+        None, description="If omitted, descent is scaled by the same factor as ascent."
+    )
 
 
 class MapSettings(_Model):
     basemap: Literal["plain", "tiles"] = Field(
-        "plain", description="'tiles' downloads light map tiles (needs network and `[tiles]` extra)."
+        "plain",
+        description="'tiles' puts a real map under the route: tiles are downloaded on the first build "
+                    "(needs network and the `[tiles]` extra) and cached in the trip folder.",
+    )
+    tile_source: Literal["topo", "light"] = Field(
+        "topo", description="'topo' = OpenTopoMap (contours, glaciers); 'light' = a minimal grey map."
     )
     color_by: Literal["none", "day"] = "none"
     label_peaks: bool = True
+
+
+CoverStat = Literal["highest_point", "ascent", "descent", "distance", "peaks", "days", "net_time",
+                    "vertical_range"]
 
 
 class Cover(_Model):
@@ -120,17 +146,20 @@ class Trip(_Model):
     region: LText
     country: LText | None = None
     kind: LText | None = Field(None, description="Climb class, e.g. 'Technical'.")
-    outcome: LText | None = Field(
-        None, description="One plain sentence for the title page, e.g. 'Summited all six peaks'."
-    )
-    participants: list[Person]
+    participants: list[Person] = Field(default_factory=list)
     peaks: list[Peak] = Field(default_factory=list)
-    summary: list[Summary] = Field(default_factory=list)
+    route_description: LText | None = Field(
+        None, description="A few paragraphs about the route itself, shown first under route information."
+    )
     routes: list[RouteGroup] = Field(default_factory=list)
     tactics: LText | None = None
     gear: list[LText] = Field(default_factory=list)
     conditions: LText | None = None
     accommodation: list[Accommodation] = Field(default_factory=list)
+    breaks: list[Break] = Field(
+        default_factory=list,
+        description="Named daytime stops (1 to 5 hours) shown on the elevation profile.",
+    )
     support: LText | None = None
     acclimatisation: LText | None = None
     days: list[Day] = Field(default_factory=list)
@@ -138,6 +167,15 @@ class Trip(_Model):
     map: MapSettings = Field(default_factory=MapSettings)
     photos: list[Photo] = Field(default_factory=list)
     references: list[str] = Field(default_factory=list)
+    calibration: Calibration | None = None
+    cover_stats: list[CoverStat] = Field(
+        default_factory=lambda: ["highest_point", "ascent", "distance", "peaks", "days"],
+        min_length=2, max_length=5,
+        description="Headline numbers on the title page, in order. The first one is set in the accent colour.",
+    )
+    acclimatisation_chart: bool = Field(
+        False, description="Add the climb-high-sleep-low chart (needs three or more days)."
+    )
     show_contents: bool = True
 
     @model_validator(mode="after")

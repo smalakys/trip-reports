@@ -1,21 +1,21 @@
-"""The build pipeline: trip folder -> prepared assets -> figures -> data bundle -> Typst -> PDF."""
+"""The build pipeline: trip folder -> prepared assets -> figures -> document model -> ReportLab -> PDF."""
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-
-import typst
 
 from . import plots
 from .analysis import Analysis, acclimatisation_points, analyse
 from .document import Assets, build_document
 from .i18n import Locale
 from .images import prepare_image
+from .render import render_pdf
 from .schema import Trip, load_trip
-from .theme import FONTS_DIR, TEMPLATES_DIR, load_theme
+from .theme import load_theme
 
 
 @dataclass
@@ -34,12 +34,27 @@ def _check_files(trip: Trip, trip_dir: Path) -> None:
         raise FileNotFoundError("files listed in the trip file are missing: " + ", ".join(missing))
 
 
+def label_rests(trip: Trip, rest_spans) -> list[str | None]:
+    """Name each rest: a night after the place slept at, a long daytime stop after a ``breaks`` entry.
+
+    A night that starts after midnight belongs to the evening before.
+    """
+    sleep_at = {a.date: a.place for a in trip.accommodation}
+    break_at = {b.date: b.place for b in trip.breaks}
+    labels: list[str | None] = []
+    for start, end in rest_spans:
+        if end - start > dt.timedelta(hours=5):
+            labels.append(sleep_at.get((start - dt.timedelta(hours=6)).date()))
+        else:
+            labels.append(break_at.get(start.date()))
+    return labels
+
+
 def build_report(
     trip_dir: str | Path,
     lang: str | None = None,
     out: str | Path | None = None,
     theme_path: str | Path | None = None,
-    template: str | Path | None = None,
     png_dir: str | Path | None = None,
     png_ppi: int = 70,
     mode: str | None = None,
@@ -72,14 +87,28 @@ def build_report(
     # analysis and figures
     an = analyse(trip, trip_dir)
     loc = Locale(lang)
+    base_image, map_note = None, None
+    if trip.map.basemap == "tiles":
+        try:
+            from .basemap import crop_and_tone, load_basemap
+
+            view = plots.map_view(an.track).extent
+            w, h = view[1] - view[0], view[3] - view[2]
+            wanted = (view[0] - 0.05 * w, view[1] + 0.05 * w, view[2] - 0.05 * h, view[3] + 0.05 * h)
+            bm = load_basemap(trip_dir, wanted, trip.map.tile_source)
+            base_image, map_note = crop_and_tone(bm, view, desaturate=0.55, lighten=0.1), bm.attribution
+        except Exception as exc:  # no network, tiles blocked, missing [tiles] extra ...
+            an.warnings.append(f"map tiles unavailable ({exc}); drew the plain map instead")
     map_ratio = plots.route_map(an.track, an.day_start_idx, an.peaks, theme, loc,
-                                assets_dir / "route-map.svg", basemap=trip.map.basemap,
-                                color_by=trip.map.color_by, label_peaks=trip.map.label_peaks)
+                                assets_dir / "route-map.svg", color_by=trip.map.color_by,
+                                label_peaks=trip.map.label_peaks, base_image=base_image,
+                                base_out=assets_dir / "route-map-base.jpg")
+    rest_labels = label_rests(trip, an.rest_spans)
     prof_ratio = plots.elevation_profile(an.track, an.rest_spans, an.peaks, theme, loc,
-                                         assets_dir / "elevation-profile.svg")
+                                         assets_dir / "elevation-profile.svg", rest_labels=rest_labels)
 
     acc_file, acc_ratio, acc_delta = None, 0.0, 0.0
-    if len(an.days) >= 3:
+    if trip.acclimatisation_chart and len(an.days) >= 3:
         points, summit = acclimatisation_points(an, lambda n: f"{loc.ui('day')} {n}")
         gaps = [p.high_m - p.sleep_m for p in points if p.sleep_m is not None]
         acc_file, acc_delta = "assets/climb-high-sleep-low.svg", float(sum(gaps) / len(gaps))
@@ -87,26 +116,26 @@ def build_report(
 
     assets = Assets(cover="assets/cover.jpg", cover_px=cover_px,
                     route_map="assets/route-map.svg", route_map_ratio=map_ratio,
+                    route_map_under="assets/route-map-base.jpg" if base_image is not None else None,
+                    map_attribution=map_note,
                     profile="assets/elevation-profile.svg", profile_ratio=prof_ratio,
                     acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos)
     doc = build_document(trip, an, assets, theme, lang)
     (build_dir / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    shutil.copy(Path(template) if template else TEMPLATES_DIR / "report.typ", build_dir / "report.typ")
-
-    common = dict(root=str(build_dir), font_paths=[str(FONTS_DIR)], ignore_system_fonts=True)
-    typst.compile(str(build_dir / "report.typ"), output=str(out_pdf), **common)
+    render_pdf(doc, out_pdf, build_dir)
 
     pngs: list[Path] = []
     if png_dir:
+        import pypdfium2 as pdfium
+
         png_dir = Path(png_dir)
         png_dir.mkdir(parents=True, exist_ok=True)
         for old in png_dir.glob(f"page-{lang}-*.png"):
             old.unlink()
-        pages = typst.compile(str(build_dir / "report.typ"), format="png", ppi=png_ppi, **common)
-        pages = pages if isinstance(pages, list) else [pages]
-        for i, data in enumerate(pages, start=1):
-            p = png_dir / f"page-{lang}-{i:02d}.png"
-            p.write_bytes(data)
+        pdf = pdfium.PdfDocument(str(out_pdf))
+        for i in range(len(pdf)):
+            p = png_dir / f"page-{lang}-{i + 1:02d}.png"
+            pdf[i].render(scale=png_ppi / 72).to_pil().save(p)
             pngs.append(p)
 
     if not keep_build_dir:

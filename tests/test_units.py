@@ -40,15 +40,13 @@ def test_number_and_date_formats():
 
 
 def test_tokens_resolve_for_both_modes():
-    from tripreports.theme import load_theme, px_to_pt, typst_font
+    from tripreports.theme import load_theme, px_to_pt
 
     light, dark = load_theme(), load_theme(mode="dark")
     assert light["colors"]["series-1"] == light["colors"]["brand"] == "#fc4c02"   # alias followed
     assert light["colors"]["ink"] != dark["colors"]["ink"]
     assert light["colors"]["brand"] == dark["colors"]["brand"]
     assert px_to_pt("16px") == 12.0 and light["type"]["body"]["size"] == 12.0
-    assert typst_font("Barlow Semi Condensed") == ("Barlow", 87.5)
-    assert typst_font("Barlow Condensed") == ("Barlow", 75.0)
     with pytest.raises(ValueError):
         load_theme(mode="sepia")
 

@@ -7,12 +7,13 @@ mode = "light"          # "light" or "dark": which token theme to render
 [page]
 width_mm         = 210
 height_mm        = 297
-margin_x_mm      = 15   # text column = 180 mm, the design system's 680 px report column
-margin_top_mm    = 20
+margin_left_mm   = 20   # text column = 175 mm
+margin_right_mm  = 15
+margin_top_mm    = 31   # chapter titles sit 32 mm from the top edge
 margin_bottom_mm = 22
 
 [text]
-justify = false
+justify = true
 
 [images]
 cover_long_edge_px = 2800

@@ -158,12 +158,17 @@ def elevation_profile(
     theme: dict,
     loc: Locale,
     out: Path,
+    rest_labels: list[str | None] | None = None,
 ) -> float:
-    """Altitude against time, filled to the baseline, summits called out. Returns height/width."""
+    """Altitude against time, filled to the baseline, summits called out. Returns height/width.
+
+    ``rest_labels`` names each rest span (for example the hut slept at); a span without a name
+    is labelled with the generic word for night.
+    """
     fonts = setup_style(theme)
     c = theme["colors"]
     width_in = text_width_mm(theme) * MM
-    height_in = width_in * 0.5
+    height_in = width_in * 0.44
     fig, ax = plt.subplots(figsize=(width_in, height_in))
 
     naive = [x.replace(tzinfo=None) for x in track.t]
@@ -182,7 +187,7 @@ def elevation_profile(
     # Summit labels: elevation in the `peak` weight over the name, hanging beside a leader.
     marks = sorted((p for p in peaks if p.time is not None), key=lambda p: p.time)
     ax.set_ylim(lo, hi_data + 100)
-    ticks = _alt_ticks(lo, hi_data)
+    ticks = _alt_ticks(lo, hi_data, 500.0 if hi_data - lo <= 2500 else 1000.0)
     ax.set_yticks(ticks)
     ax.set_yticklabels([loc.num(v) for v in ticks])
     labels = []
@@ -242,12 +247,14 @@ def elevation_profile(
     ax.set_xticklabels(names)
     _style_cartesian(ax, theme, fonts)
     ax.spines["bottom"].set_visible(True)
-    for a, b in rest_spans:
-        if (b - a) > dt.timedelta(hours=5):
+    for i, (a, b) in enumerate(rest_spans):
+        name = rest_labels[i] if rest_labels and i < len(rest_labels) else None
+        if name or (b - a) > dt.timedelta(hours=5):
             mid = mdates.date2num(a.replace(tzinfo=None)) + (
                 mdates.date2num(b.replace(tzinfo=None)) - mdates.date2num(a.replace(tzinfo=None))) / 2
-            ax.text(mid, lo + (hi_data - lo) * 0.02, loc.ui("night"), rotation=90, ha="center",
-                    va="bottom", fontproperties=fonts.muted, color=c["ink-muted"], zorder=1)
+            ax.text(mid, lo + (hi_data - lo) * 0.02, name or loc.ui("night"), rotation=90, ha="center",
+                    va="bottom", fontproperties=fonts.muted, color=c["ink-muted"], zorder=4,
+                    path_effects=_halo(c["surface-200"], 2.5))
 
     fig.savefig(out, format="svg")
     plt.close(fig)
@@ -342,23 +349,25 @@ def _nice_step(span_m: float) -> float:
     return 10 * mag
 
 
-def route_map(
-    track: Track,
-    day_starts: list[int],
-    peaks: list[PeakMark],
-    theme: dict,
-    loc: Locale,
-    out: Path,
-    basemap: str = "plain",
-    color_by: str = "none",
-    label_peaks: bool = True,
-) -> float:
-    """Route on a flat map; returns height/width ratio of the figure."""
-    fonts = setup_style(theme)
-    c = theme["colors"]
-    width_in = text_width_mm(theme) * MM
+@dataclass
+class MapView:
+    """What the route map shows: decimated track in web mercator and the visible window."""
 
-    keep = [0]  # decimate to ~15 m spacing for a light SVG
+    x: np.ndarray
+    y: np.ndarray
+    keep: np.ndarray            # indices of the track points kept
+    xlim: tuple[float, float]
+    ylim: tuple[float, float]
+    ratio: float                # figure height / width
+
+    @property
+    def extent(self) -> tuple[float, float, float, float]:
+        return (*self.xlim, *self.ylim)
+
+
+def map_view(track: Track) -> MapView:
+    """Decimate the track to ~15 m spacing and choose the visible window around it."""
+    keep = [0]
     for i in range(1, len(track)):
         if track.dist[i] - track.dist[keep[-1]] >= 15:
             keep.append(i)
@@ -366,18 +375,45 @@ def route_map(
         keep.append(len(track) - 1)
     keep_arr = np.array(keep)
     x, y = _merc(track.lat[keep_arr], track.lon[keep_arr])
-
     pad = 0.12
     xmin, xmax, ymin, ymax = x.min(), x.max(), y.min(), y.max()
     dx, dy = max(xmax - xmin, 500), max(ymax - ymin, 500)
     ratio = min(max(dy / dx, 0.62), 1.1)
-    fig, ax = plt.subplots(figsize=(width_in, width_in * ratio))
     cx_, cy_ = (xmin + xmax) / 2, (ymin + ymax) / 2
     half_w = dx * (0.5 + pad)
     half_h = max(dy * (0.5 + pad), half_w * ratio)
     half_w = max(half_w, half_h / ratio)
-    ax.set_xlim(cx_ - half_w, cx_ + half_w)
-    ax.set_ylim(cy_ - half_h, cy_ + half_h)
+    return MapView(x, y, keep_arr, (cx_ - half_w, cx_ + half_w), (cy_ - half_h, cy_ + half_h), ratio)
+
+
+def route_map(
+    track: Track,
+    day_starts: list[int],
+    peaks: list[PeakMark],
+    theme: dict,
+    loc: Locale,
+    out: Path,
+    color_by: str = "none",
+    label_peaks: bool = True,
+    base_image=None,
+    base_out: Path | None = None,
+) -> float:
+    """Route on a map; returns height/width ratio of the figure.
+
+    With ``base_image`` (a PIL image already cropped to the map window) the SVG is transparent
+    and the image is written to ``base_out`` to be placed underneath; otherwise a flat grid is
+    drawn in the SVG itself.
+    """
+    fonts = setup_style(theme)
+    c = theme["colors"]
+    width_in = text_width_mm(theme) * MM
+    view = map_view(track)
+    keep_arr, x, y, ratio = view.keep, view.x, view.y, view.ratio
+    cx_, cy_ = sum(view.xlim) / 2, sum(view.ylim) / 2
+    half_w, half_h = (view.xlim[1] - view.xlim[0]) / 2, (view.ylim[1] - view.ylim[0]) / 2
+    fig, ax = plt.subplots(figsize=(width_in, width_in * ratio))
+    ax.set_xlim(*view.xlim)
+    ax.set_ylim(*view.ylim)
     ax.set_aspect("equal", adjustable="box")
     ax.set_xticks([])
     ax.set_yticks([])
@@ -385,16 +421,11 @@ def route_map(
 
     lat0 = float(np.mean(track.lat))
     k = 1 / math.cos(math.radians(lat0))  # mercator metres per true metre
-    if basemap == "tiles":
-        try:
-            import contextily as cx
-
-            cx.add_basemap(ax, crs="EPSG:3857", source=cx.providers.CartoDB.PositronNoLabels,
-                           attribution=False, zorder=0)
-        except Exception as exc:  # network, missing extra, ...
-            print(f"warning: map tiles unavailable ({exc}); using the plain basemap")
-            basemap = "plain"
-    if basemap == "plain":
+    if base_image is not None:
+        base_image.save(base_out, quality=88, optimize=True)
+        ax.set_facecolor("none")
+        fig.patch.set_alpha(0)
+    else:
         step = _nice_step(2 * half_w / k) * k
         for v in np.arange(math.floor((cx_ - half_w) / step) * step, cx_ + half_w + step, step):
             ax.axvline(v, color=c["line"], lw=0.75, zorder=0)
@@ -480,6 +511,6 @@ def route_map(
     for spine in ax.spines.values():
         spine.set_visible(False)
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    fig.savefig(out, format="svg")
+    fig.savefig(out, format="svg", transparent=base_image is not None)
     plt.close(fig)
     return ratio

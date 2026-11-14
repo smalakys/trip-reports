@@ -9,7 +9,10 @@ description = "Publication-ready mountaineering trip reports from a trip file, a
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "typst>=0.13",
+  "reportlab>=4.2",
+  "svglib>=1.5",
+  "pyphen>=0.16",
+  "pypdfium2>=4.30",
   "matplotlib>=3.8",
   "numpy>=1.26",
   "scipy>=1.11",
@@ -21,7 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tiles = ["contextily>=1.5"]
-dev = ["pytest>=8", "pypdf>=4", "ruff>=0.5"]
+dev = ["pytest>=8", "pypdf>=4", "pdfplumber>=0.11", "ruff>=0.5"]
 
 [project.scripts]
 tripreport = "tripreports.cli:main"

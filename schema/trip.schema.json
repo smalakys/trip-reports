@@ -69,6 +69,72 @@
       "title": "Accommodation",
       "type": "object"
     },
+    "Break": {
+      "additionalProperties": false,
+      "description": "A long daytime stop worth naming on the elevation profile, e.g. a hut.",
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "place": {
+          "title": "Place",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "place"
+      ],
+      "title": "Break",
+      "type": "object"
+    },
+    "Calibration": {
+      "additionalProperties": false,
+      "description": "Totals to trust over the ones computed from the GPX track.\n\nGPS altitude is noisy, so computed ascent is rarely exact. Give the figures you trust (a\nguidebook, or a service that corrects elevation) and every day's distance, ascent and\ndescent is scaled by the same factor, so tables and rows still add up.",
+      "properties": {
+        "distance_km": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Km"
+        },
+        "ascent_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ascent M"
+        },
+        "descent_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If omitted, descent is scaled by the same factor as ascent.",
+          "title": "Descent M"
+        }
+      },
+      "title": "Calibration",
+      "type": "object"
+    },
     "Cover": {
       "additionalProperties": false,
       "properties": {
@@ -154,12 +220,22 @@
       "properties": {
         "basemap": {
           "default": "plain",
-          "description": "'tiles' downloads light map tiles (needs network and `[tiles]` extra).",
+          "description": "'tiles' puts a real map under the route: tiles are downloaded on the first build (needs network and the `[tiles]` extra) and cached in the trip folder.",
           "enum": [
             "plain",
             "tiles"
           ],
           "title": "Basemap",
+          "type": "string"
+        },
+        "tile_source": {
+          "default": "topo",
+          "description": "'topo' = OpenTopoMap (contours, glaciers); 'light' = a minimal grey map.",
+          "enum": [
+            "topo",
+            "light"
+          ],
+          "title": "Tile Source",
           "type": "string"
         },
         "color_by": {
@@ -465,45 +541,6 @@
       ],
       "title": "Section",
       "type": "object"
-    },
-    "Summary": {
-      "additionalProperties": false,
-      "properties": {
-        "label": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            }
-          ],
-          "title": "Label"
-        },
-        "text": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            }
-          ],
-          "title": "Text"
-        }
-      },
-      "required": [
-        "label",
-        "text"
-      ],
-      "title": "Summary",
-      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -635,7 +672,21 @@
       "description": "Climb class, e.g. 'Technical'.",
       "title": "Kind"
     },
-    "outcome": {
+    "participants": {
+      "items": {
+        "$ref": "#/$defs/Person"
+      },
+      "title": "Participants",
+      "type": "array"
+    },
+    "peaks": {
+      "items": {
+        "$ref": "#/$defs/Peak"
+      },
+      "title": "Peaks",
+      "type": "array"
+    },
+    "route_description": {
       "anyOf": [
         {
           "type": "string"
@@ -651,29 +702,8 @@
         }
       ],
       "default": null,
-      "description": "One plain sentence for the title page, e.g. 'Summited all six peaks'.",
-      "title": "Outcome"
-    },
-    "participants": {
-      "items": {
-        "$ref": "#/$defs/Person"
-      },
-      "title": "Participants",
-      "type": "array"
-    },
-    "peaks": {
-      "items": {
-        "$ref": "#/$defs/Peak"
-      },
-      "title": "Peaks",
-      "type": "array"
-    },
-    "summary": {
-      "items": {
-        "$ref": "#/$defs/Summary"
-      },
-      "title": "Summary",
-      "type": "array"
+      "description": "A few paragraphs about the route itself, shown first under route information.",
+      "title": "Route Description"
     },
     "routes": {
       "items": {
@@ -742,6 +772,14 @@
       "title": "Accommodation",
       "type": "array"
     },
+    "breaks": {
+      "description": "Named daytime stops (1 to 5 hours) shown on the elevation profile.",
+      "items": {
+        "$ref": "#/$defs/Break"
+      },
+      "title": "Breaks",
+      "type": "array"
+    },
     "support": {
       "anyOf": [
         {
@@ -808,6 +846,43 @@
       "title": "References",
       "type": "array"
     },
+    "calibration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Calibration"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "cover_stats": {
+      "description": "Headline numbers on the title page, in order. The first one is set in the accent colour.",
+      "items": {
+        "enum": [
+          "highest_point",
+          "ascent",
+          "descent",
+          "distance",
+          "peaks",
+          "days",
+          "net_time",
+          "vertical_range"
+        ],
+        "type": "string"
+      },
+      "maxItems": 5,
+      "minItems": 2,
+      "title": "Cover Stats",
+      "type": "array"
+    },
+    "acclimatisation_chart": {
+      "default": false,
+      "description": "Add the climb-high-sleep-low chart (needs three or more days).",
+      "title": "Acclimatisation Chart",
+      "type": "boolean"
+    },
     "show_contents": {
       "default": true,
       "title": "Show Contents",
@@ -819,8 +894,7 @@
     "cover",
     "start_date",
     "end_date",
-    "region",
-    "participants"
+    "region"
   ],
   "title": "Trip",
   "type": "object"

@@ -23,6 +23,7 @@ class Analysis:
     rest_spans: list[tuple[dt.datetime, dt.datetime]]
     peaks: list[PeakMark]
     warnings: list[str]
+    factors: dict | None = None    # distance / ascent / descent scale factors when calibrated
 
 
 def analyse(trip: Trip, trip_dir: Path) -> Analysis:
@@ -59,14 +60,31 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
                 warnings.append(f"track never comes near {p.name} (lat/lon may be wrong)")
         marks.append(PeakMark(p.name, p.elevation_m, when, p.lat, p.lon))
 
+    totals = gs.total_stats(track, days)
+    factors = None
+    cal = trip.calibration
+    if cal is not None:
+        f_dist = cal.distance_km * 1000 / totals["distance_m"] if cal.distance_km else 1.0
+        f_up = cal.ascent_m / totals["ascent_m"] if cal.ascent_m else 1.0
+        f_down = cal.descent_m / totals["descent_m"] if cal.descent_m else f_up
+        for d in days:
+            d.distance_m *= f_dist
+            d.ascent_m *= f_up
+            d.descent_m *= f_down
+        totals["distance_m"] *= f_dist
+        totals["ascent_m"] *= f_up
+        totals["descent_m"] *= f_down
+        factors = {"distance": f_dist, "ascent": f_up, "descent": f_down}
+
     return Analysis(
         track=track,
         days=days,
         day_start_idx=starts,
-        totals=gs.total_stats(track, days),
+        totals=totals,
         rest_spans=gs.rests(track),
         peaks=marks,
         warnings=warnings,
+        factors=factors,
     )
 
 

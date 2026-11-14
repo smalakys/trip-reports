@@ -225,3 +225,7 @@ examples/*/out/
 out/
 
 .DS_Store
+
+# private reports and trips (real data): never committed
+/reports/
+/trips/

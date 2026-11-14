@@ -1,7 +1,7 @@
 """Theme loading: design tokens (assets/design/tokens.json) + page settings, light or dark.
 
 Token values are resolved for one mode (aliases like ``"{brand}"`` followed) and lengths are
-converted from CSS px to typographic points (1 px = 0.75 pt), so the Typst template and the
+converted from CSS px to typographic points (1 px = 0.75 pt), so the PDF renderer and the
 matplotlib figures read the same numbers.
 """
 
@@ -15,7 +15,6 @@ from pathlib import Path
 
 ASSETS = Path(str(resources.files("tripreports") / "assets"))
 FONTS_DIR = ASSETS / "fonts"
-TEMPLATES_DIR = ASSETS / "templates"
 TOKENS_PATH = ASSETS / "design" / "tokens.json"
 
 PT_PER_PX = 0.75
@@ -64,17 +63,6 @@ def _first_family(css: str) -> str:
     return css.split(",")[0].strip().strip('"')
 
 
-def typst_font(family: str) -> tuple[str, float]:
-    """Typst files "Barlow Condensed" under family "Barlow" with a width (stretch); split it.
-
-    Returns (typst family, stretch in percent): "Barlow Semi Condensed" -> ("Barlow", 87.5).
-    """
-    for suffix, stretch in ((" Semi Condensed", 87.5), (" Condensed", 75.0)):
-        if family.endswith(suffix):
-            return family[: -len(suffix)], stretch
-    return family, 100.0
-
-
 def load_theme(path: str | Path | None = None, mode: str | None = None) -> dict:
     """Return the resolved theme as a plain dict (JSON-serialisable)."""
     settings = tomllib.loads((ASSETS / "theme" / "default.toml").read_text(encoding="utf-8"))
@@ -91,12 +79,8 @@ def load_theme(path: str | Path | None = None, mode: str | None = None) -> dict:
     for group in tokens["type"]["groups"]:
         for s in group["styles"]:
             lead = px_to_pt(s["lineHeight"])
-            family = fonts[group["family"]]
-            t_family, t_stretch = typst_font(family)
             styles[s["name"]] = {
-                "family": family,
-                "typst_family": t_family,
-                "stretch": t_stretch,
+                "family": fonts[group["family"]],
                 "size": px_to_pt(s["fontSize"]),
                 "leading": lead,
                 "weight": int(s["fontWeight"]),
@@ -118,4 +102,4 @@ def load_theme(path: str | Path | None = None, mode: str | None = None) -> dict:
 
 def text_width_mm(theme: dict) -> float:
     page = theme["page"]
-    return page["width_mm"] - 2 * page["margin_x_mm"]
+    return page["width_mm"] - page["margin_left_mm"] - page["margin_right_mm"]
