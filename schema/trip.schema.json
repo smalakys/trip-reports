@@ -1,0 +1,901 @@
+{
+  "$defs": {
+    "Accommodation": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "place": {
+          "title": "Place",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hut, bivouac, tent, ...",
+          "title": "Kind"
+        },
+        "altitude_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Altitude M"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "date",
+        "place"
+      ],
+      "title": "Accommodation",
+      "type": "object"
+    },
+    "Break": {
+      "additionalProperties": false,
+      "description": "A long daytime stop worth naming on the elevation profile, e.g. a hut.",
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "place": {
+          "title": "Place",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "place"
+      ],
+      "title": "Break",
+      "type": "object"
+    },
+    "Calibration": {
+      "additionalProperties": false,
+      "description": "Totals to trust over the ones computed from the GPX track.\n\nGPS altitude is noisy, so computed ascent is rarely exact. Give the figures you trust (a\nguidebook, or a service that corrects elevation) and every day's distance, ascent and\ndescent is scaled by the same factor, so tables and rows still add up.",
+      "properties": {
+        "distance_km": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Km"
+        },
+        "ascent_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ascent M"
+        },
+        "descent_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If omitted, descent is scaled by the same factor as ascent.",
+          "title": "Descent M"
+        }
+      },
+      "title": "Calibration",
+      "type": "object"
+    },
+    "Cover": {
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "description": "Path relative to the trip folder.",
+          "title": "Image",
+          "type": "string"
+        },
+        "kicker": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Small line above the title.",
+          "title": "Kicker"
+        }
+      },
+      "required": [
+        "image"
+      ],
+      "title": "Cover",
+      "type": "object"
+    },
+    "Day": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Title"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Diary text. Blank line = new paragraph; **bold**, *italic*.",
+          "title": "Text"
+        }
+      },
+      "required": [
+        "date",
+        "title",
+        "text"
+      ],
+      "title": "Day",
+      "type": "object"
+    },
+    "MapSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "basemap": {
+          "default": "plain",
+          "description": "'tiles' puts a real map under the route: tiles are downloaded on the first build (needs network and the `[tiles]` extra) and cached in the trip folder.",
+          "enum": [
+            "plain",
+            "tiles"
+          ],
+          "title": "Basemap",
+          "type": "string"
+        },
+        "tile_source": {
+          "default": "topo",
+          "description": "'topo' = OpenTopoMap (contours, glaciers); 'light' = a minimal grey map.",
+          "enum": [
+            "topo",
+            "light"
+          ],
+          "title": "Tile Source",
+          "type": "string"
+        },
+        "color_by": {
+          "default": "none",
+          "enum": [
+            "none",
+            "day"
+          ],
+          "title": "Color By",
+          "type": "string"
+        },
+        "label_peaks": {
+          "default": true,
+          "title": "Label Peaks",
+          "type": "boolean"
+        }
+      },
+      "title": "MapSettings",
+      "type": "object"
+    },
+    "Peak": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "elevation_m": {
+          "title": "Elevation M",
+          "type": "number"
+        },
+        "lat": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Used to find the summit time in the GPX track.",
+          "title": "Lat"
+        },
+        "lon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lon"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{2}:\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Local summit time. Computed from the GPX track when lat/lon are given.",
+          "title": "Time"
+        }
+      },
+      "required": [
+        "name",
+        "elevation_m"
+      ],
+      "title": "Peak",
+      "type": "object"
+    },
+    "Person": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "experience": {
+          "description": "Notable previous ascents, one per entry.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Experience",
+          "type": "array"
+        },
+        "contact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contact"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "Photo": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "description": "Path relative to the trip folder.",
+          "title": "File",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Caption"
+        },
+        "size": {
+          "default": "half",
+          "description": "'full' = a page of its own; 'half' = two per page.",
+          "enum": [
+            "full",
+            "half"
+          ],
+          "title": "Size",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "caption"
+      ],
+      "title": "Photo",
+      "type": "object"
+    },
+    "RouteGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Overall grade as the guidebook writes it, e.g. 'AD+'.",
+          "title": "Grade"
+        },
+        "grade_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grading system shown in small caps on the badge: Alpine, UIAA, Cat., ...",
+          "title": "Grade System"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extra route facts shown beside the grade, e.g. '700 m'.",
+          "title": "Note"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/$defs/Section"
+          },
+          "title": "Sections",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "RouteGroup",
+      "type": "object"
+    },
+    "Section": {
+      "additionalProperties": false,
+      "description": "One technical section of a route (a peak, a ridge, a pitch group).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grade"
+        },
+        "pitches": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pitches"
+        },
+        "leader": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leader"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Section",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "languages": {
+      "default": [
+        "lt"
+      ],
+      "description": "Languages the content is written in.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Languages",
+      "type": "array"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      ],
+      "title": "Title"
+    },
+    "subtitle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subtitle"
+    },
+    "cover": {
+      "$ref": "#/$defs/Cover"
+    },
+    "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+    },
+    "end_date": {
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+    },
+    "timezone": {
+      "default": "Europe/Zurich",
+      "description": "IANA zone of the track's local time.",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "day_cutoff_hour": {
+      "default": 0,
+      "description": "Hour at which a track day starts (use 3 if you start at 02:30).",
+      "maximum": 12,
+      "minimum": 0,
+      "title": "Day Cutoff Hour",
+      "type": "integer"
+    },
+    "region": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      ],
+      "title": "Region"
+    },
+    "country": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Country"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Climb class, e.g. 'Technical'.",
+      "title": "Kind"
+    },
+    "participants": {
+      "items": {
+        "$ref": "#/$defs/Person"
+      },
+      "title": "Participants",
+      "type": "array"
+    },
+    "peaks": {
+      "items": {
+        "$ref": "#/$defs/Peak"
+      },
+      "title": "Peaks",
+      "type": "array"
+    },
+    "route_description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A few paragraphs about the route itself, shown first under route information.",
+      "title": "Route Description"
+    },
+    "routes": {
+      "items": {
+        "$ref": "#/$defs/RouteGroup"
+      },
+      "title": "Routes",
+      "type": "array"
+    },
+    "tactics": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tactics"
+    },
+    "gear": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "title": "Gear",
+      "type": "array"
+    },
+    "conditions": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Conditions"
+    },
+    "accommodation": {
+      "items": {
+        "$ref": "#/$defs/Accommodation"
+      },
+      "title": "Accommodation",
+      "type": "array"
+    },
+    "breaks": {
+      "description": "Named daytime stops (1 to 5 hours) shown on the elevation profile.",
+      "items": {
+        "$ref": "#/$defs/Break"
+      },
+      "title": "Breaks",
+      "type": "array"
+    },
+    "support": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Support"
+    },
+    "acclimatisation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Acclimatisation"
+    },
+    "days": {
+      "items": {
+        "$ref": "#/$defs/Day"
+      },
+      "title": "Days",
+      "type": "array"
+    },
+    "gpx": {
+      "default": "track.gpx",
+      "description": "Path relative to the trip folder.",
+      "title": "Gpx",
+      "type": "string"
+    },
+    "map": {
+      "$ref": "#/$defs/MapSettings"
+    },
+    "photos": {
+      "items": {
+        "$ref": "#/$defs/Photo"
+      },
+      "title": "Photos",
+      "type": "array"
+    },
+    "references": {
+      "items": {
+        "type": "string"
+      },
+      "title": "References",
+      "type": "array"
+    },
+    "calibration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Calibration"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "cover_stats": {
+      "description": "Headline numbers on the title page, in order. The first one is set in the accent colour.",
+      "items": {
+        "enum": [
+          "highest_point",
+          "ascent",
+          "descent",
+          "distance",
+          "peaks",
+          "days",
+          "net_time",
+          "vertical_range"
+        ],
+        "type": "string"
+      },
+      "maxItems": 5,
+      "minItems": 2,
+      "title": "Cover Stats",
+      "type": "array"
+    },
+    "acclimatisation_chart": {
+      "default": false,
+      "description": "Add the climb-high-sleep-low chart (needs three or more days).",
+      "title": "Acclimatisation Chart",
+      "type": "boolean"
+    },
+    "show_contents": {
+      "default": true,
+      "title": "Show Contents",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "title",
+    "cover",
+    "start_date",
+    "end_date",
+    "region"
+  ],
+  "title": "Trip",
+  "type": "object"
+}

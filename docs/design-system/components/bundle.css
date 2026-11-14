@@ -1,0 +1,58 @@
+/* LAA component styles. Requires tokens.css. Fonts: Barlow, Barlow Condensed, Barlow Semi Condensed (Google Fonts). */
+.laa, .laa * { box-sizing: border-box; }
+.laa { font-family: var(--font-sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+.laa-num { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
+.laa-label { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-muted); }
+
+/* Button */
+.laa-btn { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-4);
+  font: 600 15px/1 var(--font-sans); border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer; text-decoration: none; }
+.laa-btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.laa-btn--primary { background: var(--action); color: var(--on-action); }
+.laa-btn--primary:hover { filter: brightness(1.08); }
+.laa-btn--secondary { background: var(--surface-000); color: var(--ink); border-color: var(--line-strong); }
+.laa-btn--secondary:hover { background: var(--surface-200); }
+.laa-btn--ghost { background: transparent; color: var(--accent-text); padding: 0 var(--space-2); }
+.laa-btn--ghost:hover { background: var(--brand-tint); }
+.laa-btn[disabled] { opacity: .45; cursor: not-allowed; filter: none; }
+.laa-btn svg { width: 18px; height: 18px; }
+
+/* GradeBadge */
+.laa-grade { display: inline-flex; align-items: center; gap: var(--space-1); height: 24px; padding: 0 10px; border-radius: var(--radius-pill);
+  font: 600 13px/1 var(--font-numeric); letter-spacing: .3px; border: 1px solid var(--line-strong); color: var(--ink); background: var(--surface-000); }
+.laa-grade--key { background: var(--action); border-color: var(--action); color: var(--on-action); }
+.laa-grade__sys { font: 600 10px/1 var(--font-sans); letter-spacing: .6px; text-transform: uppercase; color: var(--ink-muted); }
+.laa-grade--key .laa-grade__sys { color: var(--on-action); opacity: .85; }
+
+/* StatGroup */
+.laa-stats { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+.laa-stat { display: flex; flex-direction: column; gap: var(--space-1); min-width: 96px; }
+.laa-stat + .laa-stat { padding-left: var(--space-6); border-left: 1px solid var(--line); }
+.laa-stat__value { font: 600 40px/40px var(--font-numeric); font-variant-numeric: tabular-nums; color: var(--ink); }
+.laa-stat__unit { font-size: 20px; font-weight: 500; color: var(--ink-muted); margin-left: 2px; }
+.laa-stat--accent .laa-stat__value { color: var(--brand); }
+
+/* ReportHeader */
+.laa-report-head { background: var(--surface-000); border-radius: var(--radius-md); overflow: hidden; }
+.laa-tricolour { display: flex; flex-direction: column; width: 48px; }
+.laa-tricolour i { height: 6px; display: block; }
+.laa-tricolour i:nth-child(1) { background: var(--flag-yellow); }
+.laa-tricolour i:nth-child(2) { background: var(--flag-green); }
+.laa-tricolour i:nth-child(3) { background: var(--flag-red); }
+
+/* Charts */
+.laa-chart { background: var(--surface-000); border-radius: var(--radius-md); padding: var(--space-6); }
+.laa-chart__title { font: 600 18px/24px var(--font-sans); margin: 0; color: var(--ink); }
+.laa-chart__sub { font: 400 14px/20px var(--font-sans); margin: 2px 0 var(--space-4); color: var(--ink-muted); }
+.laa-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.laa-chart .grid { stroke: var(--chart-grid); stroke-width: 1; }
+.laa-chart .base { stroke: var(--line-strong); stroke-width: 1; }
+.laa-chart .tick { font: 500 12px var(--font-numeric); fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.laa-chart .s1 { stroke: var(--series-1); fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.laa-chart .s2 { stroke: var(--series-2); fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.laa-chart .s3 { stroke: var(--series-3); fill: none; stroke-width: 1.5; stroke-dasharray: 4 4; }
+.laa-chart .area { fill: var(--chart-area); stroke: none; }
+.laa-chart .dot { fill: var(--surface-000); stroke-width: 2; }
+.laa-chart .lbl { font: 600 13px var(--font-sans); }
+.laa-chart .lbl-muted { font: 400 12px var(--font-sans); fill: var(--ink-muted); }
+.laa-chart .peak { font: 600 15px var(--font-numeric); fill: var(--ink); }

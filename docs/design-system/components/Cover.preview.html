@@ -1,0 +1,51 @@
+<!-- @dsCard height=288 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@700&family=Barlow+Semi+Condensed:wght@500;600&display=swap">
+<style>
+  .cv { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--surface-100); }
+  .cv svg { position: absolute; inset: 0; }
+  .cv .brand { fill: var(--brand); }
+  .cv .slab { fill: var(--ink); }
+  .cv .fy { fill: var(--flag-yellow); }
+  .cv .fg { fill: var(--flag-green); }
+  .cv .fr { fill: var(--flag-red); }
+  .cv .tile { rx: var(--radius-sm); }
+  .cv .stripe { stroke: var(--surface-100); stroke-width: 3; }
+  .cv .txt { position: absolute; left: 48px; bottom: 40px; max-width: 440px; }
+  .cv h1 { margin: 0; font: 700 120px/.92 var(--font-display); color: var(--ink); letter-spacing: -1px; }
+  .cv p { margin: 12px 0 0; font: 500 14px/20px var(--font-sans); color: var(--ink-muted); }
+</style>
+<div class="cv">
+  <svg viewBox="0 0 960 288" width="960" height="288" aria-hidden="true">
+    <!--
+      blocks: brand 336x288 (space-12 x7 by x6), ink 112x184, flag-yellow/green/red 112x24 each (space-6), gaps space-1/space-4
+      arrangement: one tall orange slab bleeding top, right and bottom, with an ink satellite and the tricolour bands to its left, as on the membership card
+      pattern: stripes, row "loud, bold" + the card's own diagonal hairlines over the orange peak; 12 cut-out stripes at space-3 pitch
+      scales: space-1 4, space-3 12, space-4 16, space-6 24, space-12 48; radius-sm on the satellites, slab square
+    -->
+    <defs><clipPath id="slabclip"><rect x="624" y="0" width="336" height="288"/></clipPath></defs>
+    <rect class="slab tile" x="496" y="0" width="112" height="184"/>
+    <rect class="fy tile" x="496" y="200" width="112" height="24"/>
+    <rect class="fg tile" x="496" y="228" width="112" height="24"/>
+    <rect class="fr tile" x="496" y="256" width="112" height="24"/>
+    <rect class="brand" x="624" y="0" width="336" height="288"/>
+    <g clip-path="url(#slabclip)">
+      <line class="stripe" x1="768" y1="0" x2="888" y2="288"/>
+      <line class="stripe" x1="780" y1="0" x2="900" y2="288"/>
+      <line class="stripe" x1="792" y1="0" x2="912" y2="288"/>
+      <line class="stripe" x1="804" y1="0" x2="924" y2="288"/>
+      <line class="stripe" x1="816" y1="0" x2="936" y2="288"/>
+      <line class="stripe" x1="828" y1="0" x2="948" y2="288"/>
+      <line class="stripe" x1="840" y1="0" x2="960" y2="288"/>
+      <line class="stripe" x1="852" y1="0" x2="972" y2="288"/>
+      <line class="stripe" x1="864" y1="0" x2="984" y2="288"/>
+      <line class="stripe" x1="876" y1="0" x2="996" y2="288"/>
+      <line class="stripe" x1="888" y1="0" x2="1008" y2="288"/>
+      <line class="stripe" x1="900" y1="0" x2="1020" y2="288"/>
+    </g>
+  </svg>
+  <div class="txt">
+    <h1>LAA</h1>
+    <p>Lithuanian Mountaineering Association</p>
+  </div>
+</div>
+<script></script>
