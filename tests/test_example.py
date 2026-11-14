@@ -43,3 +43,16 @@ def test_summit_times_are_found_from_the_track(built):
 
 def test_nights_are_detected_as_rests(built):
     assert len(built["lt"].analysis.rest_spans) == 4
+
+
+def test_climb_high_sleep_low_chart_is_built(built):
+    assets = built["lt"].build_dir / "assets"
+    for name in ("route-map.svg", "elevation-profile.svg", "climb-high-sleep-low.svg"):
+        assert (assets / name).stat().st_size > 1000, name
+
+
+def test_dark_mode_builds(tmp_path, example_dir):
+    from tripreports.build import build_report
+
+    res = build_report(example_dir, lang="en", out=tmp_path / "dark.pdf", mode="dark")
+    assert res.pdf.stat().st_size > 50_000

@@ -47,17 +47,24 @@ class Assets:
     route_map_ratio: float
     profile: str
     profile_ratio: float
+    acc: str | None = None
+    acc_ratio: float = 0.0
+    acc_delta_m: float = 0.0
     photos: list[tuple[str, tuple[int, int]]] = field(default_factory=list)
 
 
-def _table(caption, columns, rows, **extra):
-    return {"type": "table", "caption": caption, "columns": columns, "rows": rows, **extra}
+def _table(columns, rows, **extra):
+    return {"type": "table", "columns": columns, "rows": rows, **extra}
 
 
-def _kv_table(caption, loc: Locale, rows):
-    cols = [{"header": loc.ui("parameter"), "align": "left", "width": 1.0},
-            {"header": loc.ui("value"), "align": "left", "width": 2.6}]
-    return _table(caption, cols, rows, key_first=True)
+def _kv_table(loc: Locale, rows):
+    cols = [{"header": "", "align": "left", "width": 1.0},
+            {"header": "", "align": "left", "width": 2.6}]
+    return _table(cols, rows, key_first=True)
+
+
+def badge(grade: str, system: str | None = None, key: bool = False) -> dict:
+    return {"grade": grade, "system": system or "", "key": key}
 
 
 def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: str) -> dict:
@@ -70,29 +77,55 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     ui = loc.ui
     title = L(trip.title)
     n_days = (trip.end_date - trip.start_date).days + 1
+    t = an.totals
     blocks: list[dict] = []
 
-    def h1(text, numbered=True, newpage=False):
-        blocks.append({"type": "h1", "text": text, "numbered": numbered, "newpage": newpage})
+    def h1(text, newpage=False):
+        blocks.append({"type": "h1", "text": text, "newpage": newpage})
 
-    def h2(text, numbered=True):
-        blocks.append({"type": "h2", "text": text, "numbered": numbered})
+    def h2(text, prefix=""):
+        blocks.append({"type": "h2", "text": text, "prefix": prefix})
+
+    # ---- title page data -------------------------------------------------------------------
+    highest = max((p.elevation_m for p in trip.peaks), default=t["max_alt_m"])
+    stats = [
+        {"value": loc.num(highest), "unit": ui("meters"), "label": ui("highest_point"), "accent": True},
+        {"value": loc.gain(t["ascent_m"]).replace(f"{ui('meters')}", "").strip(),
+         "unit": ui("meters"), "label": ui("ascent"), "accent": False},
+        {"value": loc.num(t["distance_m"] / 1000, 1), "unit": ui("kilometers"),
+         "label": ui("distance"), "accent": False},
+    ]
+    if trip.peaks:
+        stats.append({"value": str(len(trip.peaks)), "unit": "", "label": ui("peaks"), "accent": False})
+    stats.append({"value": str(n_days), "unit": "", "label": ui("days_stat"), "accent": False})
+    region = ", ".join(x for x in (L(trip.region), L(trip.country)) if x)
+    badges = [badge(g.grade, g.grade_system, key=i == 0) for i, g in enumerate(trip.routes) if g.grade]
+    cover = {
+        "image": assets.cover,
+        "association": ui("association"),
+        "kind": L(trip.cover.kicker) or ui("report_kind"),
+        "label": f"{region} · {loc.date_range(trip.start_date, trip.end_date)}",
+        "title": title,
+        "subtitle": L(trip.subtitle),
+        "badges": badges,
+        "outcome": L(trip.outcome),
+        "stats": stats,
+    }
 
     # ---- summary ---------------------------------------------------------------------------
     if trip.summary:
-        h1(ui("summary"), numbered=False, newpage=True)
+        h1(ui("summary"), newpage=True)
         blocks.append({"type": "labeled", "items": [
             {"label": L(s.label), "paras": rich(L(s.text))} for s in trip.summary]})
     if trip.show_contents:
-        blocks.append({"type": "contents", "title": ui("contents")})
+        blocks.append({"type": "contents", "title": ui("contents"), "newpage": not trip.summary})
 
-    # ---- 1 general information -------------------------------------------------------------
+    # ---- general information ---------------------------------------------------------------
     h1(ui("general"), newpage=True)
-    region = ", ".join(x for x in (L(trip.country), L(trip.region)) if x)
     rows = [[ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
     if trip.kind:
         rows.append([ui("class"), L(trip.kind)])
-    rows.append([ui("region"), region])
+    rows.append([ui("region"), ", ".join(x for x in (L(trip.country), L(trip.region)) if x)])
     if trip.peaks:
         rows.append([ui("peaks"), "\n".join(f"{p.name} ({loc.metres(p.elevation_m)})" for p in trip.peaks)])
     people = []
@@ -104,22 +137,21 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             lines.append(person.contact)
         people.append("\n".join(lines))
     rows.append([ui("participants"), "\n\n".join(people)])
-    blocks.append(_kv_table(None, loc, rows))
+    blocks.append(_kv_table(loc, rows))
 
-    # ---- 2 route information ---------------------------------------------------------------
+    # ---- route information -----------------------------------------------------------------
     h1(ui("route"))
-    t = an.totals
     numbers = [
         [ui("min_max_alt"), f"{loc.metres(t['min_alt_m'])} – {loc.metres(t['max_alt_m'])}"],
         [ui("vertical_range"), loc.metres(t["max_alt_m"] - t["min_alt_m"])],
         [ui("total_distance"), loc.km(t["distance_m"])],
-        [ui("total_ascent"), loc.metres(t["ascent_m"])],
-        [ui("total_descent"), loc.metres(t["descent_m"])],
-        [ui("net_time"), loc.hours(t["net_time"])],
+        [ui("total_ascent"), loc.gain(t["ascent_m"])],
+        [ui("total_descent"), loc.gain(-t["descent_m"])],
+        [ui("net_time"), loc.duration(t["net_time"])],
         [ui("days_label"), str(n_days)],
     ]
     h2(ui("route_numbers"))
-    blocks.append(_kv_table(None, loc, numbers))
+    blocks.append(_kv_table(loc, numbers))
 
     if trip.routes:
         h2(ui("route_sections"))
@@ -127,7 +159,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         has_leader = any(s.leader for g in trip.routes for s in g.sections)
         has_note = any(s.note for g in trip.routes for s in g.sections)
         cols = [{"header": ui("section"), "align": "left", "width": 2.0},
-                {"header": ui("grade"), "align": "left", "width": 1.0}]
+                {"header": ui("grade"), "align": "left", "width": 1.45}]
         if has_pitches:
             cols.append({"header": ui("pitches"), "align": "left", "width": 1.0})
         if has_leader:
@@ -136,10 +168,11 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             cols.append({"header": ui("notes"), "align": "left", "width": 2.2})
         trows = []
         for g in trip.routes:
-            head = g.name + (f"  ·  {g.grade}" if g.grade else "")
-            trows.append([{"text": head, "bold": True, "span": len(cols), "group": True}])
+            trows.append([{"group": True, "span": len(cols), "text": g.name,
+                           "badge": badge(g.grade, g.grade_system, key=True) if g.grade else None,
+                           "note": L(g.note)}])
             for s in g.sections:
-                row = [s.name, s.grade or ""]
+                row = [s.name, {"badge": badge(s.grade)} if s.grade else ""]
                 if has_pitches:
                     row.append(s.pitches or "")
                 if has_leader:
@@ -147,7 +180,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 if has_note:
                     row.append(L(s.note))
                 trows.append(row)
-        blocks.append(_table(None, cols, trows, key_first=False))
+        blocks.append(_table(cols, trows, key_first=True))
 
     if trip.tactics or trip.gear:
         h2(ui("tactics"))
@@ -175,12 +208,12 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                     row.append(L(a.note))
                 row.append(loc.metres(a.altitude_m) if a.altitude_m else "")
                 arows.append(row)
-            blocks.append(_table(None, cols, arows, key_first=False))
+            blocks.append(_table(cols, arows, key_first=True))
         if trip.support:
             blocks.append({"type": "labeled", "items": [
                 {"label": ui("support"), "paras": rich(L(trip.support))}]})
 
-    # ---- 3 timing --------------------------------------------------------------------------
+    # ---- timing ----------------------------------------------------------------------------
     h1(ui("timing"))
     timed = [p for p in an.peaks if p.time is not None]
     if timed:
@@ -191,36 +224,31 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 {"header": ui("time"), "align": "right", "width": 0.9}]
         rows = [[p.name, loc.metres(p.elevation_m), loc.short_date(p.time.date()), loc.clock(p.time)]
                 for p in sorted(timed, key=lambda p: p.time)]
-        blocks.append(_table(None, cols, rows, key_first=True))
+        blocks.append(_table(cols, rows, key_first=True))
     h2(ui("daily"))
-    cols = [{"header": ui("day"), "align": "left", "width": 1.7}] + [
+    cols = [{"header": ui("date"), "align": "left", "width": 1.5}] + [
         {"header": ui(k), "align": "right", "width": w} for k, w in
-        (("duration", 1.0), ("distance", 1.1), ("ascent", 1.1), ("descent", 1.3),
-         ("min_alt", 1.25), ("max_alt", 1.25))]
-    rows = []
-    for d in an.days:
-        rows.append([loc.short_date(d.date), loc.duration(d.duration), loc.km(d.distance_m),
-                     loc.metres(d.ascent_m), loc.metres(d.descent_m), loc.metres(d.min_alt_m),
-                     loc.metres(d.max_alt_m)])
-    rows.append([{"text": ui("total"), "bold": True}, {"text": loc.duration(t["net_time"]), "bold": True},
-                 {"text": loc.km(t["distance_m"]), "bold": True},
-                 {"text": loc.metres(t["ascent_m"]), "bold": True},
-                 {"text": loc.metres(t["descent_m"]), "bold": True},
-                 {"text": loc.metres(t["min_alt_m"]), "bold": True},
-                 {"text": loc.metres(t["max_alt_m"]), "bold": True}])
-    blocks.append(_table(None, cols, rows, key_first=True, total_row=True))
+        (("duration", 0.9), ("distance", 1.0), ("ascent", 1.1), ("descent", 1.3),
+         ("min_alt", 1.4), ("max_alt", 1.4))]
+    rows = [[loc.short_date(d.date), loc.duration(d.duration), loc.km(d.distance_m),
+             loc.gain(d.ascent_m), loc.gain(-d.descent_m), loc.metres(d.min_alt_m),
+             loc.metres(d.max_alt_m)] for d in an.days]
+    total = [ui("total"), loc.duration(t["net_time"]), loc.km(t["distance_m"]), loc.gain(t["ascent_m"]),
+             loc.gain(-t["descent_m"]), loc.metres(t["min_alt_m"]), loc.metres(t["max_alt_m"])]
+    rows.append([{"text": v, "bold": True} for v in total])
+    blocks.append(_table(cols, rows, key_first=True, total_row=True))
 
-    # ---- 4 progress ------------------------------------------------------------------------
+    # ---- progress --------------------------------------------------------------------------
     if trip.days or trip.acclimatisation:
         h1(ui("progress"))
         if trip.acclimatisation:
             h2(ui("acclimatisation"))
             blocks.append({"type": "paras", "paras": rich(L(trip.acclimatisation))})
         for d in sorted(trip.days, key=lambda d: d.date):
-            h2(f"{loc.short_date(d.date)} · {L(d.title)}")
+            h2(L(d.title), prefix=loc.short_date(d.date))
             blocks.append({"type": "paras", "paras": rich(L(d.text)), "diary": True})
 
-    # ---- 5 figures -------------------------------------------------------------------------
+    # ---- figures ---------------------------------------------------------------------------
     h1(ui("figures"), newpage=True)
     days_txt = loc.days(n_days)
     source_map = ui("source_tiles") if trip.map.basemap == "tiles" else ui("source_track")
@@ -229,34 +257,41 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         "headline": loc.fig("route_title").format(distance=loc.km(t["distance_m"], 0), days=days_txt),
         "subtitle": loc.fig("route_subtitle"),
         "image": assets.route_map, "ratio": assets.route_map_ratio,
-        "source": source_map,
-        "caption": loc.fig("route_caption"),
+        "source": source_map, "caption": loc.fig("route_caption"),
     })
     blocks.append({
         "type": "figure",
-        "headline": loc.fig("profile_title").format(ascent=loc.metres(t["ascent_m"]), days=days_txt),
+        "headline": loc.fig("profile_title").format(ascent=loc.gain(t["ascent_m"]), days=days_txt),
         "subtitle": loc.fig("profile_subtitle"),
         "image": assets.profile, "ratio": assets.profile_ratio,
-        "source": ui("source_gpx"),
-        "caption": loc.fig("profile_caption"),
+        "source": ui("source_gpx"), "caption": loc.fig("profile_caption"),
     })
+    if assets.acc:
+        blocks.append({
+            "type": "figure",
+            "headline": loc.fig("acc_title").format(delta=loc.metres(assets.acc_delta_m)),
+            "subtitle": loc.fig("acc_subtitle"),
+            "image": assets.acc, "ratio": assets.acc_ratio,
+            "source": ui("source_gpx"), "caption": loc.fig("acc_caption"),
+        })
 
-    # ---- 6 photos --------------------------------------------------------------------------
+    # ---- photos ----------------------------------------------------------------------------
     if trip.photos:
         h1(ui("photos"), newpage=True)
         tw = text_width_mm(theme)
-        page_h = theme["page"]["height_mm"] - theme["page"]["margin_top_mm"] - theme["page"]["margin_bottom_mm"]
-        heading_room = 52  # the section heading shares the first photo page
+        page = theme["page"]
+        page_h = page["height_mm"] - page["margin_top_mm"] - page["margin_bottom_mm"]
+        heading_room = 40  # the section heading shares the first photo page
         items = []
         for k, (photo, (_path, (pw, ph))) in enumerate(zip(trip.photos, assets.photos, strict=True)):
             aspect = pw / ph
             room = heading_room if k == 0 else 0
             if photo.size == "full":
-                w, h = min(tw, (page_h - 34 - room) * aspect), None
+                w, h = min(tw, (page_h - 30 - room) * aspect), None
             elif aspect >= 1.3:      # landscape: full text width, lightly cropped to fit two per page
-                w, h = tw, 106.0
+                w, h = tw, 108.0
             else:                    # portrait: centred, scaled to fit
-                w, h = min(tw, 106.0 * aspect), None
+                w, h = min(tw, 108.0 * aspect), None
             items.append({"size": photo.size, "image": _path, "w_mm": round(w, 2), "h_mm": h,
                           "caption": L(photo.caption)})
         pages, cur = [], []
@@ -278,24 +313,14 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         blocks.append({"type": "photo_pages", "pages": pages})
 
     if trip.references:
-        h1(ui("references"), numbered=False, newpage=True)
+        h1(ui("references"), newpage=True)
         blocks.append({"type": "bullets", "items": trip.references, "plain": True})
 
-    people = ", ".join(p.name for p in trip.participants)
+    people_names = ", ".join(p.name for p in trip.participants)
     return {
         "lang": lang,
         "theme": theme,
-        "meta": {"title": title, "author": people},
-        "labels": {"table": ui("table"), "figure": ui("figure")},
-        "cover": {
-            "image": assets.cover,
-            "kicker": L(trip.cover.kicker),
-            "title": title,
-            "subtitle": L(trip.subtitle),
-            "meta": [
-                {"k": loc.data["labels"]["cover_meta_date"], "v": loc.date_range(trip.start_date, trip.end_date)},
-                {"k": loc.data["labels"]["cover_meta_team"], "v": people},
-            ],
-        },
+        "meta": {"title": title, "author": people_names},
+        "cover": cover,
         "blocks": blocks,
     }

@@ -1,4 +1,8 @@
-"""Figures: the route map and the elevation profile. Plain inputs in, an SVG file out."""
+"""Figures in the LAA plot style: elevation profile, route map, climb-high-sleep-low chart.
+
+Plain inputs in, an SVG file out. Every colour, font and size comes from the resolved theme
+(design tokens), so light and dark builds differ only in the token values.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +19,7 @@ import matplotlib.patheffects as pe  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib import font_manager  # noqa: E402
+from matplotlib.font_manager import FontProperties  # noqa: E402
 
 from .gpxstats import Track  # noqa: E402
 from .i18n import Locale  # noqa: E402
@@ -22,6 +27,7 @@ from .theme import FONTS_DIR, text_width_mm  # noqa: E402
 
 MM = 1 / 25.4
 R_MERC = 6_378_137.0
+PX = 0.75  # points per CSS px
 
 
 @dataclass
@@ -33,31 +39,82 @@ class PeakMark:
     lon: float | None = None
 
 
-def setup_style(theme: dict) -> None:
+@dataclass
+class DayPoint:
+    """One day of the climb-high-sleep-low chart."""
+
+    label: str
+    high_m: float
+    sleep_m: float | None  # None on the last day (no night after it)
+
+
+class Fonts:
+    """Font properties for the three token families."""
+
+    def __init__(self, theme: dict):
+        t = theme["type"]
+        self.sans = FontProperties(family=theme["fonts"]["sans"], weight=400, size=t["body-sm"]["size"])
+        self.sans_semibold = FontProperties(family=theme["fonts"]["sans"], weight=600,
+                                            size=t["body-sm"]["size"])
+        self.tick = FontProperties(family=theme["fonts"]["numeric"], weight=500, size=t["tick"]["size"])
+        self.peak = FontProperties(family=theme["fonts"]["numeric"], weight=600,
+                                   size=15 * PX)  # the design system's `peak` annotation
+        self.muted = FontProperties(family=theme["fonts"]["sans"], weight=400, size=t["tick"]["size"])
+
+
+def setup_style(theme: dict) -> Fonts:
     for ttf in FONTS_DIR.glob("*.ttf"):
         font_manager.fontManager.addfont(str(ttf))
     c = theme["colors"]
     plt.rcParams.update({
         "svg.fonttype": "path",
-        "font.family": theme["fonts"]["family"],
-        "font.size": 7.5,
+        "font.family": theme["fonts"]["sans"],
         "text.color": c["ink"],
-        "axes.edgecolor": c["rule"],
-        "axes.labelcolor": c["muted"],
-        "xtick.color": c["muted"],
-        "ytick.color": c["muted"],
+        "axes.edgecolor": c["line-strong"],
+        "axes.linewidth": 0.75,
+        "axes.labelcolor": c["ink-muted"],
+        "axes.facecolor": c["surface-000"],
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.spines.left": False,
-        "axes.spines.bottom": False,
-        "figure.facecolor": "white",
-        "savefig.facecolor": "white",
+        "xtick.color": c["ink-muted"],
+        "ytick.color": c["ink-muted"],
+        "figure.facecolor": c["surface-000"],
+        "savefig.facecolor": c["surface-000"],
+        "lines.solid_capstyle": "round",
     })
+    return Fonts(theme)
 
 
-def _halo(color="white", w=2.5):
+def _halo(color: str, w: float = 2.5):
     return [pe.withStroke(linewidth=w, foreground=color)]
 
+
+def _style_cartesian(ax, theme: dict, fonts: Fonts) -> None:
+    """Horizontal gridlines only, a line-strong baseline, tick labels in the numeric face."""
+    c = theme["colors"]
+    ax.yaxis.grid(True, color=c["chart-grid"], lw=0.75)
+    ax.xaxis.grid(False)
+    ax.set_axisbelow(True)
+    ax.tick_params(axis="both", length=0)
+    ax.tick_params(axis="x", pad=6)
+    ax.tick_params(axis="y", pad=4)
+    for lab in [*ax.get_xticklabels(), *ax.get_yticklabels()]:
+        lab.set_fontproperties(fonts.tick)
+        lab.set_color(c["ink-muted"])
+
+
+def _round_floor(v: float, step: float) -> float:
+    return math.floor(v / step) * step
+
+
+def _alt_ticks(lo: float, hi: float, step: float = 500.0) -> list[float]:
+    return [float(v) for v in np.arange(lo, hi + 0.001, step)]
+
+
+# --------------------------------------------------------------------------------------------
+# Label placement for the profile: flags beside vertical leaders
+# --------------------------------------------------------------------------------------------
 
 def _flag_slot(items: list[tuple[float, float, float, int]], xc: float, w: float,
                left_limit: float) -> tuple[int, str]:
@@ -102,69 +159,76 @@ def elevation_profile(
     loc: Locale,
     out: Path,
 ) -> float:
-    """Draw the profile; returns height/width ratio of the figure."""
-    setup_style(theme)
+    """Altitude against time, filled to the baseline, summits called out. Returns height/width."""
+    fonts = setup_style(theme)
     c = theme["colors"]
     width_in = text_width_mm(theme) * MM
-    height_in = width_in * 0.46
+    height_in = width_in * 0.5
     fig, ax = plt.subplots(figsize=(width_in, height_in))
 
     naive = [x.replace(tzinfo=None) for x in track.t]
     t = mdates.date2num(naive)
     ele = track.ele
+    lo = _round_floor(ele.min() - 100, 500)
+    hi_data = float(ele.max())
 
     for a, b in rest_spans:
         ax.axvspan(mdates.date2num(a.replace(tzinfo=None)), mdates.date2num(b.replace(tzinfo=None)),
-                   color=c["surface"], lw=0, zorder=0)
-    ax.fill_between(t, ele, 0, color=c["accent"], alpha=0.10, lw=0, zorder=2)
-    ax.plot(t, ele, color=c["accent"], lw=1.3, zorder=3, solid_capstyle="round")
-
-    lo = math.floor((ele.min() - 150) / 500) * 500
-    hi_data = ele.max()
+                   color=c["surface-200"], lw=0, zorder=0)
+    ax.fill_between(t, ele, lo, color=c["chart-area"], lw=0, zorder=2)
+    ax.plot(t, ele, color=c["series-1"], lw=2 * PX, zorder=3)
     ax.set_xlim(t[0], t[-1])
 
-    # Summit labels: staggered rows above the profile, with leader lines.
-    marks = [p for p in peaks if p.time is not None]
-    marks.sort(key=lambda p: p.time)
+    # Summit labels: elevation in the `peak` weight over the name, hanging beside a leader.
+    marks = sorted((p for p in peaks if p.time is not None), key=lambda p: p.time)
+    ax.set_ylim(lo, hi_data + 100)
+    ticks = _alt_ticks(lo, hi_data)
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([loc.num(v) for v in ticks])
     labels = []
     for p in marks:
         x = mdates.date2num(p.time.replace(tzinfo=None))
-        txt = ax.text(x, 0, f"{p.name}\n{loc.metres(p.elevation_m)}", ha="right", va="bottom", multialignment="right",
-                      fontsize=6.3, linespacing=1.25, color=c["ink"], zorder=6,
-                      path_effects=_halo("white", 3.0))
-        labels.append((p, x, txt))
-    ax.set_ylim(lo, hi_data + 100)
+        name = ax.annotate(p.name, (x, hi_data), xytext=(0, 0), textcoords="offset points",
+                           ha="right", va="bottom", fontproperties=fonts.muted, color=c["ink-muted"],
+                           zorder=6, path_effects=_halo(c["surface-000"]))
+        num = ax.annotate(loc.metres(p.elevation_m), (x, hi_data), xytext=(0, 11),
+                          textcoords="offset points", ha="right", va="bottom",
+                          fontproperties=fonts.peak, color=c["ink"], zorder=6,
+                          path_effects=_halo(c["surface-000"]))
+        labels.append((p, x, name, num))
+    fig.subplots_adjust(left=0.075, right=0.995, top=0.99, bottom=0.1)
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
-    # Greedy row assignment: labels in one row must not overlap, and a leader line must not cross
-    # a label in a lower row (or be crossed by one placed later).
-    items: list[tuple[float, float, float, int]] = []  # x0, x1, leader x, row (pixels)
-    placed = []
-    inv = ax.transData.inverted()
-    for p, x, txt in labels:
-        bb = txt.get_window_extent(renderer)
-        w = bb.x1 - bb.x0
-        xc = ax.transData.transform((x, 0))[0]  # the leader's x
 
+    items: list[tuple[float, float, float, int]] = []
+    placed = []
+    for p, x, name, num in labels:
+        w = max(name.get_window_extent(renderer).width, num.get_window_extent(renderer).width)
+        xc = ax.transData.transform((x, 0))[0]
         row, side = _flag_slot(items, xc, w, ax.bbox.x0)
         x0, x1 = (xc - w - 3, xc + 3) if side == "right" else (xc - 3, xc + w + 3)
         items.append((x0, x1, xc, row))
-        placed.append((p, x, txt, row, side))
-    row_end = [0] * (max((r for *_, r in items), default=-1) + 1)
-    n_rows = len(row_end)
-    row_h = (hi_data - lo) * 0.19
-    top = hi_data + 120 + row_h * max(n_rows, 1)
-    ax.set_ylim(lo, top)
-    pad = inv.transform((ax.transData.transform((t[0], 0))[0] + 3, 0))[0] - t[0]
-    for p, x, txt, row, side in placed:
-        y_label = hi_data + 140 + row * row_h
-        txt.set_position((x - pad if side == "right" else x + pad, y_label))
-        txt.set_ha("right" if side == "right" else "left")
-        txt.set_multialignment("right" if side == "right" else "left")
-        ax.plot([x, x], [p.elevation_m + 25, y_label - 12], color=c["muted"], lw=0.5, zorder=4)
-        ax.plot([x], [p.elevation_m], marker="o", ms=3.4, mfc="white", mec=c["ink"], mew=0.9, zorder=5)
+        placed.append((p, x, name, num, row, side))
+    n_rows = max((r for *_, r in items), default=0) + 1
+    row_h, gap = 28.0, 14.0                      # points: height of one label row, dot-to-label gap
+    head_pts = gap + n_rows * row_h + 4          # headroom needed above the highest data point
+    axes_pts = ax.bbox.height * 72 / fig.dpi
+    span = (hi_data - lo) / (1 - head_pts / axes_pts)
+    ax.set_ylim(lo, lo + span)
+    pts_per_m = axes_pts / span
+    for p, x, name, num, row, side in placed:
+        y_label = hi_data + (gap + row * row_h) / pts_per_m
+        off = -3 if side == "right" else 3
+        for ann, dy in ((name, 0), (num, 11)):
+            ann.xy = (x, y_label)
+            ann.set_position((off, dy))
+            ann.set_ha(side)
+        ax.plot([x, x], [p.elevation_m + 30, y_label - 2 / pts_per_m], color=c["line-strong"], lw=0.5,
+                zorder=4)
+        ax.plot([x], [p.elevation_m], marker="o", ms=6 * PX, mfc=c["surface-000"],
+                mec=c["series-1"], mew=2 * PX, zorder=5)
 
-    # Axes: day names centred on each day, hairline at midnight, horizontal grid.
+    # Axes: ISO day labels centred on each day, hairlines at midnight, rests labelled.
     days = sorted({x.date() for x in naive})
     t0, t1 = naive[0], naive[-1]
     centres, names = [], []
@@ -176,24 +240,83 @@ def elevation_profile(
             names.append(loc.short_date(d))
     ax.set_xticks(centres)
     ax.set_xticklabels(names)
-    for d in days[1:]:
-        ax.axvline(mdates.date2num(dt.datetime.combine(d, dt.time(0))), color=c["rule"], lw=0.6, zorder=1)
-    ax.tick_params(axis="x", length=0, pad=5)
-    ax.tick_params(axis="y", length=0, pad=2)
-    ax.yaxis.grid(True, color=c["rule"], lw=0.5)
-    ax.set_axisbelow(True)
-    ticks = [v for v in np.arange(lo, hi_data + 1, 500) if v <= hi_data + 50]
+    _style_cartesian(ax, theme, fonts)
+    ax.spines["bottom"].set_visible(True)
+    for a, b in rest_spans:
+        if (b - a) > dt.timedelta(hours=5):
+            mid = mdates.date2num(a.replace(tzinfo=None)) + (
+                mdates.date2num(b.replace(tzinfo=None)) - mdates.date2num(a.replace(tzinfo=None))) / 2
+            ax.text(mid, lo + (hi_data - lo) * 0.02, loc.ui("night"), rotation=90, ha="center",
+                    va="bottom", fontproperties=fonts.muted, color=c["ink-muted"], zorder=1)
+
+    fig.savefig(out, format="svg")
+    plt.close(fig)
+    return height_in / width_in
+
+
+# --------------------------------------------------------------------------------------------
+# Climb high, sleep low
+# --------------------------------------------------------------------------------------------
+
+def acclimatisation_chart(
+    days: list[DayPoint],
+    summit: tuple[str, float, int] | None,
+    theme: dict,
+    loc: Locale,
+    out: Path,
+) -> float:
+    """The day's high point (orange, filled) against the altitude slept at (blue, line only).
+
+    ``summit`` is (name, altitude, day index) of the highest point, called out with a hollow dot.
+    """
+    fonts = setup_style(theme)
+    c = theme["colors"]
+    width_in = text_width_mm(theme) * MM
+    height_in = width_in * 0.42
+    fig, ax = plt.subplots(figsize=(width_in, height_in))
+
+    x = np.arange(len(days))
+    high = np.array([d.high_m for d in days])
+    sleep_idx = [i for i, d in enumerate(days) if d.sleep_m is not None]
+    sleep = np.array([days[i].sleep_m for i in sleep_idx])
+    all_vals = np.concatenate([high, sleep])
+    lo = _round_floor(all_vals.min() - 100, 500)
+    top_val = float(all_vals.max())
+    step = 500.0 if top_val - lo <= 2500 else 1000.0
+    ticks = _alt_ticks(lo, top_val, step)
+
+    ax.fill_between(x, high, lo, color=c["chart-area"], lw=0, zorder=2)
+    ax.plot(x, high, color=c["series-1"], lw=2 * PX, zorder=3)
+    ax.plot(sleep_idx, sleep, color=c["series-2"], lw=2 * PX, zorder=3)
+    ax.set_xlim(-0.35, len(days) - 1 + 0.35)
+    ax.set_ylim(lo, top_val + (top_val - lo) * 0.16)
     ax.set_yticks(ticks)
     ax.set_yticklabels([loc.num(v) for v in ticks])
+    ax.set_xticks(x)
+    ax.set_xticklabels([d.label for d in days])
 
-    for a, b in rest_spans:
-        mid = mdates.date2num(a.replace(tzinfo=None)) + (mdates.date2num(b.replace(tzinfo=None)) -
-                                                          mdates.date2num(a.replace(tzinfo=None))) / 2
-        if (b - a) > dt.timedelta(hours=5):
-            ax.text(mid, lo + (hi_data - lo) * 0.02, loc.ui("night"), rotation=90, ha="center",
-                    va="bottom", fontsize=6, color=c["muted"], zorder=1)
+    # direct labels at the right end of each line, in the series colour
+    ax.annotate(loc.ui("acc_high"), (x[-1], high[-1]), xytext=(8, 0), textcoords="offset points",
+                va="center", fontproperties=fonts.sans_semibold, color=c["accent-text"],
+                annotation_clip=False)
+    if sleep_idx:
+        ax.annotate(loc.ui("acc_sleep"), (sleep_idx[-1], sleep[-1]), xytext=(8, 0),
+                    textcoords="offset points", va="center", fontproperties=fonts.sans_semibold,
+                    color=c["series-2"], annotation_clip=False)
+    if summit:
+        name, alt, i = summit
+        ax.plot([i], [high[i]], marker="o", ms=6 * PX, mfc=c["surface-000"], mec=c["series-1"],
+                mew=2 * PX, zorder=5)
+        ax.annotate(f"{loc.metres(alt)}", (i, high[i]), xytext=(0, 8), textcoords="offset points",
+                    ha="center", va="bottom", fontproperties=fonts.peak, color=c["ink"],
+                    path_effects=_halo(c["surface-000"]), zorder=6)
+        ax.annotate(name, (i, high[i]), xytext=(0, 22), textcoords="offset points", ha="center",
+                    va="bottom", fontproperties=fonts.muted, color=c["ink-muted"],
+                    path_effects=_halo(c["surface-000"]), zorder=6)
 
-    fig.subplots_adjust(left=0.065, right=0.995, top=0.99, bottom=0.09)
+    _style_cartesian(ax, theme, fonts)
+    ax.spines["bottom"].set_visible(True)
+    fig.subplots_adjust(left=0.075, right=0.80, top=0.97, bottom=0.12)
     fig.savefig(out, format="svg")
     plt.close(fig)
     return height_in / width_in
@@ -230,13 +353,12 @@ def route_map(
     color_by: str = "none",
     label_peaks: bool = True,
 ) -> float:
-    """Draw the route map; returns height/width ratio of the figure."""
-    setup_style(theme)
+    """Route on a flat map; returns height/width ratio of the figure."""
+    fonts = setup_style(theme)
     c = theme["colors"]
     width_in = text_width_mm(theme) * MM
 
-    # decimate to ~15 m spacing for a light SVG
-    keep = [0]
+    keep = [0]  # decimate to ~15 m spacing for a light SVG
     for i in range(1, len(track)):
         if track.dist[i] - track.dist[keep[-1]] >= 15:
             keep.append(i)
@@ -259,7 +381,7 @@ def route_map(
     ax.set_aspect("equal", adjustable="box")
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.set_facecolor(c["surface"])
+    ax.set_facecolor(c["surface-100"])
 
     lat0 = float(np.mean(track.lat))
     k = 1 / math.cos(math.radians(lat0))  # mercator metres per true metre
@@ -274,55 +396,57 @@ def route_map(
             basemap = "plain"
     if basemap == "plain":
         step = _nice_step(2 * half_w / k) * k
-        gx = np.arange(math.floor((cx_ - half_w) / step) * step, cx_ + half_w + step, step)
-        gy = np.arange(math.floor((cy_ - half_h) / step) * step, cy_ + half_h + step, step)
-        for v in gx:
-            ax.axvline(v, color="white", lw=0.8, zorder=0)
-        for v in gy:
-            ax.axhline(v, color="white", lw=0.8, zorder=0)
+        for v in np.arange(math.floor((cx_ - half_w) / step) * step, cx_ + half_w + step, step):
+            ax.axvline(v, color=c["line"], lw=0.75, zorder=0)
+        for v in np.arange(math.floor((cy_ - half_h) / step) * step, cy_ + half_h + step, step):
+            ax.axhline(v, color=c["line"], lw=0.75, zorder=0)
 
-    # track
-    ax.plot(x, y, color="white", lw=4.0, solid_capstyle="round", solid_joinstyle="round", zorder=3)
+    ax.plot(x, y, color=c["surface-000"], lw=4 * PX * 1.6, solid_joinstyle="round", zorder=3)
     if color_by == "day" and len(day_starts) > 1:
+        cycle = [c[f"series-{i}"] for i in range(1, 6)]
         bounds = [int(np.searchsorted(keep_arr, s)) for s in day_starts] + [len(keep_arr)]
         for i in range(len(day_starts)):
             a, b = bounds[i], min(bounds[i + 1] + 1, len(keep_arr))
-            ax.plot(x[a:b], y[a:b], color=c["days"][i % len(c["days"])], lw=2.0,
-                    solid_capstyle="round", solid_joinstyle="round", zorder=4)
+            ax.plot(x[a:b], y[a:b], color=cycle[i % len(cycle)], lw=2 * PX * 1.3,
+                    solid_joinstyle="round", zorder=4)
     else:
-        ax.plot(x, y, color=c["accent"], lw=2.0, solid_capstyle="round", solid_joinstyle="round", zorder=4)
+        ax.plot(x, y, color=c["series-1"], lw=2 * PX * 1.3, solid_joinstyle="round", zorder=4)
 
-    # day-start badges
     badges = []
     for n, s in enumerate(day_starts, start=1):
         bx, by = _merc(track.lat[s], track.lon[s])
-        ax.plot([bx], [by], marker="o", ms=9.5, mfc=c["ink"], mec="white", mew=1.2, zorder=7)
-        ax.text(bx, by, str(n), color="white", fontsize=5.8, fontweight="bold", ha="center",
+        ax.plot([bx], [by], marker="o", ms=11, mfc=c["surface-inverse"], mec=c["surface-000"],
+                mew=1.2, zorder=7)
+        ax.text(bx, by, str(n), color=c["ink-inverse"], fontproperties=fonts.tick, ha="center",
                 va="center", zorder=8)
         badges.append((float(bx), float(by)))
 
-    # peaks with collision-aware labels
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     occupied = []
     for bx, by in badges:
         px, py = ax.transData.transform((bx, by))
-        occupied.append((px - 8, py - 8, px + 8, py + 8))
+        occupied.append((px - 9, py - 9, px + 9, py + 9))
     candidates = [(6, 5, "left", "bottom"), (6, -5, "left", "top"), (-6, 5, "right", "bottom"),
                   (-6, -5, "right", "top"), (0, 8, "center", "bottom"), (0, -8, "center", "top"),
                   (9, 0, "left", "center"), (-9, 0, "right", "center")]
+
+    def put(p, ox, oy, ha, va):
+        return ax.annotate(p.name, _merc(p.lat, p.lon), xytext=(ox, oy), textcoords="offset points",
+                           ha=ha, va=va, fontproperties=fonts.sans, color=c["ink"], zorder=9,
+                           path_effects=_halo(c["surface-100"]))
+
     for p in peaks:
         if p.lat is None or p.lon is None:
             continue
         px_, py_ = _merc(p.lat, p.lon)
-        ax.plot([px_], [py_], marker="^", ms=5.2, mfc=c["ink"], mec="white", mew=0.8, zorder=6)
+        ax.plot([px_], [py_], marker="o", ms=6 * PX * 1.2, mfc=c["surface-000"], mec=c["ink"],
+                mew=2 * PX, zorder=6)
         if not label_peaks:
             continue
         best = None
         for ox, oy, ha, va in candidates:
-            txt = ax.annotate(p.name, (px_, py_), xytext=(ox, oy), textcoords="offset points",
-                              ha=ha, va=va, fontsize=6.3, color=c["ink"], zorder=9,
-                              path_effects=_halo())
+            txt = put(p, ox, oy, ha, va)
             fig.canvas.draw()
             bb = txt.get_window_extent(renderer)
             box = (bb.x0, bb.y0, bb.x1, bb.y1)
@@ -335,28 +459,23 @@ def route_map(
                 break
             txt.remove()
         if best is None:  # no free spot: fall back to the first candidate
-            ox, oy, ha, va = candidates[0]
-            txt = ax.annotate(p.name, (px_, py_), xytext=(ox, oy), textcoords="offset points",
-                              ha=ha, va=va, fontsize=6.3, color=c["ink"], zorder=9,
-                              path_effects=_halo())
+            txt = put(p, *candidates[0])
             fig.canvas.draw()
             bb = txt.get_window_extent(renderer)
             best = (bb.x0, bb.y0, bb.x1, bb.y1)
         occupied.append(best)
 
-    # scale bar and north arrow
     bar_true = _nice_step(2 * half_w / k) / 2
-    bar_true = {500: 500, 1000: 1000}.get(bar_true, bar_true)
     bx0, by0 = cx_ - half_w + half_w * 0.06, cy_ - half_h + half_h * 0.08
-    ax.plot([bx0, bx0 + bar_true * k], [by0, by0], color=c["ink"], lw=1.6, solid_capstyle="butt", zorder=9)
+    ax.plot([bx0, bx0 + bar_true * k], [by0, by0], color=c["ink"], lw=1.5, solid_capstyle="butt", zorder=9)
     label = f"{bar_true / 1000:g} {loc.ui('kilometers')}" if bar_true >= 1000 else f"{bar_true:g} {loc.ui('meters')}"
-    ax.text(bx0, by0 + half_h * 0.03, label, fontsize=6.3, va="bottom", ha="left", color=c["ink"],
-            zorder=9, path_effects=_halo())
+    ax.text(bx0, by0 + half_h * 0.03, label, fontproperties=fonts.tick, va="bottom", ha="left",
+            color=c["ink"], zorder=9, path_effects=_halo(c["surface-100"]))
     nx, ny = cx_ + half_w * 0.93, cy_ + half_h * 0.80
     ax.annotate("", xy=(nx, ny + half_h * 0.10), xytext=(nx, ny), zorder=9,
                 arrowprops=dict(arrowstyle="-|>", color=c["ink"], lw=1.0, mutation_scale=7))
-    ax.text(nx, ny + half_h * 0.13, loc.ui("north"), ha="center", va="bottom", fontsize=6.5,
-            fontweight="bold", color=c["ink"], zorder=9)
+    ax.text(nx, ny + half_h * 0.13, loc.ui("north"), ha="center", va="bottom",
+            fontproperties=fonts.peak, color=c["ink"], zorder=9)
 
     for spine in ax.spines.values():
         spine.set_visible(False)

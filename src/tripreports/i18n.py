@@ -36,45 +36,31 @@ class Locale:
     def metres(self, x: float) -> str:
         return f"{self.num(round(x))}{NBSP}{self.ui('meters')}"
 
+    def gain(self, x: float) -> str:
+        """Elevation gain/loss with an explicit sign: +1 555 m, −823 m."""
+        sign = "+" if x > 0 else ""
+        return f"{sign}{self.metres(x)}"
+
     def km(self, metres: float, decimals: int = 1) -> str:
         return f"{self.num(metres / 1000, decimals)}{NBSP}{self.ui('kilometers')}"
 
     # ---- dates ---------------------------------------------------------------------------
-    def month(self, d: dt.date) -> str:
-        return self.data["months_genitive"][d.month - 1]
-
+    # Dates are ISO (2025-08-10) in every language; times are 24 h; durations are h:mm.
     def date(self, d: dt.date) -> str:
-        if self.code == "lt":
-            return f"{d.year}{NBSP}m. {self.month(d)} {d.day}{NBSP}d."
-        return f"{d.day} {self.month(d)} {d.year}"
+        return d.isoformat()
 
     def short_date(self, d: dt.date) -> str:
-        if self.code == "lt":
-            return f"{self.month(d).capitalize()} {d.day}{NBSP}d."
-        return f"{d.day} {self.month(d)}"
+        return d.isoformat()
 
     def date_range(self, a: dt.date, b: dt.date) -> str:
-        if a == b:
-            return self.date(a)
-        if self.code == "lt":
-            if (a.year, a.month) == (b.year, b.month):
-                return f"{a.year}{NBSP}m. {self.month(a)} {a.day}{EN_DASH}{b.day}{NBSP}d."
-            if a.year == b.year:
-                return (f"{a.year}{NBSP}m. {self.month(a)} {a.day}{NBSP}d. {EN_DASH} "
-                        f"{self.month(b)} {b.day}{NBSP}d.")
-            return f"{self.date(a)} {EN_DASH} {self.date(b)}"
-        if (a.year, a.month) == (b.year, b.month):
-            return f"{a.day}{EN_DASH}{b.day} {self.month(a)} {a.year}"
-        if a.year == b.year:
-            return f"{a.day} {self.month(a)} {EN_DASH} {b.day} {self.month(b)} {b.year}"
-        return f"{self.date(a)} {EN_DASH} {self.date(b)}"
+        return self.date(a) if a == b else f"{a.isoformat()} {EN_DASH} {b.isoformat()}"
 
     def clock(self, t: dt.datetime) -> str:
         return t.strftime("%H:%M")
 
     def duration(self, td: dt.timedelta) -> str:
         minutes = round(td.total_seconds() / 60)
-        return f"{minutes // 60:02d}:{minutes % 60:02d}"
+        return f"{minutes // 60}:{minutes % 60:02d}"
 
     def hours(self, td: dt.timedelta) -> str:
         return f"{round(td.total_seconds() / 3600)}{NBSP}{self.ui('hours_short')}"

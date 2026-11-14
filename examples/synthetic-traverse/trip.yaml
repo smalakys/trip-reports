@@ -29,6 +29,10 @@ kind:
   lt: Techninė / kalnų žygis
   en: Technical / mountain traverse
 
+outcome:
+  lt: Įkopta į visas šešias viršūnes
+  en: Summited all six peaks
+
 participants:
   - name: Jonas Jonaitis
     experience: [Matterhorn (4478 m), Mont Blanc (4805 m), Kazbek (5054 m)]
@@ -70,7 +74,9 @@ summary:
 
 routes:
   - name: Ledo grandinė
-    grade: "AD, III, 700 m"
+    grade: AD
+    grade_system: Alpine
+    note: "III · 700 m"
     sections:
       - {name: Ledo smailė, grade: PD, pitches: "1", leader: Jonas}
       - {name: Žaibo kupolas, grade: PD+, pitches: "2", leader: {lt: Pakaitomis, en: Alternating}}
@@ -80,7 +86,9 @@ routes:
         leader: Rūta
         note: {lt: Trapūs akmenys viršutinėje dalyje, en: Loose rock on the upper part}
   - name: Aušros keteros
-    grade: "D−, IV, 900 m"
+    grade: D−
+    grade_system: Alpine
+    note: "IV · 900 m"
     sections:
       - {name: Sidabro kalnas, grade: AD, pitches: "2", leader: Rūta}
       - {name: Aušros viršūnė, grade: D−, pitches: "4", leader: {lt: Pakaitomis, en: Alternating}}

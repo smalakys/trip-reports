@@ -57,7 +57,11 @@ class Section(_Model):
 
 class RouteGroup(_Model):
     name: str
-    grade: str | None = Field(None, description="Overall grade, e.g. 'D+, 5c, 600 m'.")
+    grade: str | None = Field(None, description="Overall grade as the guidebook writes it, e.g. 'AD+'.")
+    grade_system: str | None = Field(
+        None, description="Grading system shown in small caps on the badge: Alpine, UIAA, Cat., ..."
+    )
+    note: LText | None = Field(None, description="Extra route facts shown beside the grade, e.g. '700 m'.")
     sections: list[Section] = Field(default_factory=list)
 
 
@@ -116,6 +120,9 @@ class Trip(_Model):
     region: LText
     country: LText | None = None
     kind: LText | None = Field(None, description="Climb class, e.g. 'Technical'.")
+    outcome: LText | None = Field(
+        None, description="One plain sentence for the title page, e.g. 'Summited all six peaks'."
+    )
     participants: list[Person]
     peaks: list[Peak] = Field(default_factory=list)
     summary: list[Summary] = Field(default_factory=list)

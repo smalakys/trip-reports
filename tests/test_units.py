@@ -31,11 +31,26 @@ def test_number_and_date_formats():
     lt, en = Locale("lt"), Locale("en")
     assert lt.num(4248) == f"4{NBSP}248" and lt.num(60.1, 1) == "60,1"
     assert en.num(4248) == "4,248" and en.num(60.1, 1) == "60.1"
+    assert lt.gain(1555) == f"+1{NBSP}555{NBSP}m" and en.gain(-823) == f"\u2212823{NBSP}m"
     a, b = dt.date(2025, 8, 10), dt.date(2025, 8, 14)
-    assert lt.date_range(a, b) == f"2025{NBSP}m. rugpjūčio 10–14{NBSP}d."
-    assert en.date_range(a, b) == "10–14 August 2025"
+    assert lt.date_range(a, b) == en.date_range(a, b) == "2025-08-10 – 2025-08-14"   # ISO, every language
+    assert en.duration(dt.timedelta(hours=7, minutes=5)) == "7:05"                     # h:mm
     assert [lt.days(n) for n in (1, 5, 11, 21)] == [f"{n}".join(["", s]) for n, s in
         ((1, " dieną"), (5, " dienas"), (11, " dienų"), (21, " dieną"))]
+
+
+def test_tokens_resolve_for_both_modes():
+    from tripreports.theme import load_theme, px_to_pt, typst_font
+
+    light, dark = load_theme(), load_theme(mode="dark")
+    assert light["colors"]["series-1"] == light["colors"]["brand"] == "#fc4c02"   # alias followed
+    assert light["colors"]["ink"] != dark["colors"]["ink"]
+    assert light["colors"]["brand"] == dark["colors"]["brand"]
+    assert px_to_pt("16px") == 12.0 and light["type"]["body"]["size"] == 12.0
+    assert typst_font("Barlow Semi Condensed") == ("Barlow", 87.5)
+    assert typst_font("Barlow Condensed") == ("Barlow", 75.0)
+    with pytest.raises(ValueError):
+        load_theme(mode="sepia")
 
 
 def test_localised_text_fallbacks():

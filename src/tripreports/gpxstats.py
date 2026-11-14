@@ -42,6 +42,7 @@ class DayStats:
     max_alt_m: float
     start: dt.datetime
     end: dt.datetime
+    end_alt_m: float  # altitude where the day's recording ends (the night's sleeping altitude)
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -137,6 +138,7 @@ def day_stats(track: Track, date: dt.date, cutoff_hour: int = 0) -> DayStats | N
         max_alt_m=float(track.ele[sl].max()),
         start=start,
         end=end,
+        end_alt_m=float(track.ele[idx[-1]]),
     )
 
 

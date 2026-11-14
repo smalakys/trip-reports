@@ -10,7 +10,7 @@ from pathlib import Path
 import typst
 
 from . import plots
-from .analysis import Analysis, analyse
+from .analysis import Analysis, acclimatisation_points, analyse
 from .document import Assets, build_document
 from .i18n import Locale
 from .images import prepare_image
@@ -42,13 +42,14 @@ def build_report(
     template: str | Path | None = None,
     png_dir: str | Path | None = None,
     png_ppi: int = 70,
+    mode: str | None = None,
     keep_build_dir: bool = True,
 ) -> BuildResult:
     trip, trip_dir = load_trip(trip_dir)
     lang = lang or trip.languages[0]
     Locale(lang)  # fail early for unsupported languages
     _check_files(trip, trip_dir)
-    theme = load_theme(theme_path)
+    theme = load_theme(theme_path, mode=mode)
     out_pdf = Path(out) if out else trip_dir / "out" / f"report-{lang}.pdf"
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
     build_dir = out_pdf.parent / f".build-{lang}"
@@ -77,9 +78,17 @@ def build_report(
     prof_ratio = plots.elevation_profile(an.track, an.rest_spans, an.peaks, theme, loc,
                                          assets_dir / "elevation-profile.svg")
 
+    acc_file, acc_ratio, acc_delta = None, 0.0, 0.0
+    if len(an.days) >= 3:
+        points, summit = acclimatisation_points(an, lambda n: f"{loc.ui('day')} {n}")
+        gaps = [p.high_m - p.sleep_m for p in points if p.sleep_m is not None]
+        acc_file, acc_delta = "assets/climb-high-sleep-low.svg", float(sum(gaps) / len(gaps))
+        acc_ratio = plots.acclimatisation_chart(points, summit, theme, loc, assets_dir / "climb-high-sleep-low.svg")
+
     assets = Assets(cover="assets/cover.jpg", cover_px=cover_px,
                     route_map="assets/route-map.svg", route_map_ratio=map_ratio,
-                    profile="assets/elevation-profile.svg", profile_ratio=prof_ratio, photos=photos)
+                    profile="assets/elevation-profile.svg", profile_ratio=prof_ratio,
+                    acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos)
     doc = build_document(trip, an, assets, theme, lang)
     (build_dir / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     shutil.copy(Path(template) if template else TEMPLATES_DIR / "report.typ", build_dir / "report.typ")

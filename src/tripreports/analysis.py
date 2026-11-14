@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from . import gpxstats as gs
-from .plots import PeakMark
+from .plots import DayPoint, PeakMark
 from .schema import Trip
 
 
@@ -68,3 +68,25 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
         peaks=marks,
         warnings=warnings,
     )
+
+
+def acclimatisation_points(an: Analysis, day_label) -> tuple[list[DayPoint], tuple[str, float, int] | None]:
+    """Per-day high point and sleeping altitude, plus the highest summit as (name, altitude, day).
+
+    ``day_label(n)`` makes the axis label for day ``n`` (1-based). The last day has no sleeping
+    altitude: the trip ends when it does.
+    """
+    points = []
+    for i, d in enumerate(an.days):
+        last = i == len(an.days) - 1
+        points.append(DayPoint(day_label(i + 1), d.max_alt_m, None if last else d.end_alt_m))
+    summit = None
+    timed = [p for p in an.peaks if p.time is not None]
+    if timed:
+        top = max(timed, key=lambda p: p.elevation_m)
+        for i, d in enumerate(an.days):
+            if d.start <= top.time <= d.end:
+                # plot the day's high point (GPS) at the day, label with the official height
+                summit = (top.name, top.elevation_m, i)
+                break
+    return points, summit

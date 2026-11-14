@@ -342,8 +342,40 @@
             }
           ],
           "default": null,
-          "description": "Overall grade, e.g. 'D+, 5c, 600 m'.",
+          "description": "Overall grade as the guidebook writes it, e.g. 'AD+'.",
           "title": "Grade"
+        },
+        "grade_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grading system shown in small caps on the badge: Alpine, UIAA, Cat., ...",
+          "title": "Grade System"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extra route facts shown beside the grade, e.g. '700 m'.",
+          "title": "Note"
         },
         "sections": {
           "items": {
@@ -602,6 +634,25 @@
       "default": null,
       "description": "Climb class, e.g. 'Technical'.",
       "title": "Kind"
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "One plain sentence for the title page, e.g. 'Summited all six peaks'.",
+      "title": "Outcome"
     },
     "participants": {
       "items": {

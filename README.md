@@ -10,8 +10,8 @@ trips/my-climb/
 ```
 
 `tripreport build trips/my-climb --lang lt` produces a typeset A4 PDF: cover, summary, contents,
-general information, route tables, per-day statistics, diary, route map, elevation profile and
-photo pages. Content can be written in several languages (Lithuanian and English are built in).
+general information, route tables, per-day statistics, diary, route map, elevation profile,
+climb-high-sleep-low chart and photo pages. Content can be written in several languages (Lithuanian and English are built in).
 
 ## Quick start
 
@@ -51,7 +51,7 @@ photos/ ────┘    (stats, summits)  (language-specific       ├─> Ty
 | Figures | `plots.py` | Route map and elevation profile as SVG (matplotlib). Plain inputs, no global state. |
 | Document model | `document.py` | Decides what appears: sections, tables, wording, number and date formats per language. |
 | Layout | `assets/templates/report.typ` | Typst template; only renders the document model. |
-| Look | `assets/theme/default.toml` | Colours, font, page geometry, text sizes, image resolution. |
+| Look | `assets/design/tokens.json`, `assets/theme/default.toml` | The LAA design tokens (colour in light and dark, type, spacing, radii) plus page geometry and image resolution. See `docs/design-system/`. |
 | Wording | `assets/locales/*.toml` | UI strings, months, number formats. |
 
 Because the content lives in `trip.yaml` and the output is a pure function of the trip folder, the
@@ -72,15 +72,24 @@ Points worth knowing:
 - **Rests:** nights and stops of 2.5 h or more are detected from the track and shaded in the
   profile; the daily duration excludes them.
 - **Text markup:** blank line = paragraph; `**bold**`, `*italic*`.
+- **Grades:** give a route group `grade` (as the guidebook writes it) and `grade_system` (Alpine, UIAA, Cat.); they become badges. `outcome` is one plain sentence for the title page.
+- **Dates and numbers:** dates are ISO, times 24 h, durations `h:mm`, in every language.
 - **Photos:** `size: full` puts a photo on a page of its own; `half` places two per page.
 - **Map:** `map.basemap: plain` works offline; `tiles` downloads light map tiles
   (`pip install -e ".[tiles]"`, needs network) and adds the attribution line.
 
 ## Changing the look
 
-- Colours, font, page margins, text sizes: copy `src/tripreports/assets/theme/default.toml`,
-  edit it, and pass `--theme my-theme.toml`. Fonts are bundled (Inter, SIL OFL); the build ignores
-  system fonts so output is identical on every machine.
+The look is the LAA design system: Barlow type, one orange, asphalt and chalk neutrals, flat and
+sharp. [`docs/design-system/`](docs/design-system/README.md) maps each part of the system to the code.
+
+- Colours, type, spacing, radii: `src/tripreports/assets/design/tokens.json`. All figures and the
+  Typst template read the resolved tokens, so a changed token changes the whole report.
+- Page margins, image resolution, colour overrides for one trip: copy
+  `src/tripreports/assets/theme/default.toml`, edit it, pass `--theme my-theme.toml`.
+- Dark variant: `tripreport build <trip> --mode dark`.
+- Fonts are bundled (Barlow family, SIL OFL); the build ignores system fonts so output is identical
+  on every machine.
 - Layout: copy `src/tripreports/assets/templates/report.typ` and pass `--template my.typ`.
 - New language: add `assets/locales/<code>.toml` (copy `en.toml`).
 

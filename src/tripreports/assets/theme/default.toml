@@ -1,31 +1,18 @@
-# Default theme. Every build reads this file; a trip can override any key with
-# its own theme file (`tripreport build --theme my-theme.toml`).
+# Page, image and plot settings. Colours, type, spacing and radii come from
+# assets/design/tokens.json (the LAA design system); override a token colour here with
+# [colors] name = "#hex" if a trip needs it.
 
-[colors]
-accent  = "#FC4C02"   # the one bright colour: rules, markers, tracks, highlights
-ink     = "#242428"   # text, table rules
-muted   = "#6D6D78"   # secondary text, captions, axes
-rule    = "#DFDFE8"   # hairlines, gridlines
-surface = "#F4F4F7"   # light fills (map background, rest bands)
-# Used only when a map colours the track by day.
-days    = ["#FC4C02", "#242428", "#2F6FED", "#14A38B", "#8A5CF6", "#E0A100", "#6D6D78"]
-
-[fonts]
-family = "Inter"
+mode = "light"          # "light" or "dark": which token theme to render
 
 [page]
-width_mm        = 210
-height_mm       = 297
-margin_x_mm     = 20
-margin_top_mm   = 24
-margin_bottom_mm = 24
+width_mm         = 210
+height_mm        = 297
+margin_x_mm      = 15   # text column = 180 mm, the design system's 680 px report column
+margin_top_mm    = 20
+margin_bottom_mm = 22
 
 [text]
-body_pt    = 9.5
-caption_pt = 8.5
-small_pt   = 7.5
-leading_em = 0.62
-justify    = true
+justify = false
 
 [images]
 cover_long_edge_px = 2800

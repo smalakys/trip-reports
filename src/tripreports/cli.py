@@ -17,7 +17,7 @@ def _cmd_build(args) -> int:
     for lang in langs:
         res = build_report(args.trip, lang=lang, out=args.out if len(langs) == 1 else None,
                            theme_path=args.theme, template=args.template,
-                           png_dir=args.png, png_ppi=args.ppi)
+                           png_dir=args.png, png_ppi=args.ppi, mode=args.mode)
         for w in res.warnings:
             print(f"warning: {w}", file=sys.stderr)
         print(f"wrote {res.pdf}" + (f" and {len(res.pngs)} page images in {args.png}" if args.png else ""))
@@ -91,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--lang", action="append", help="language code; repeat for several (default: first in trip file)")
     b.add_argument("--out", help="output PDF (single language only); default <trip>/out/report-<lang>.pdf")
     b.add_argument("--theme", help="theme TOML overriding the defaults")
+    b.add_argument("--mode", choices=["light", "dark"], help="colour mode (default: from the theme, light)")
     b.add_argument("--template", help="custom Typst template instead of the built-in one")
     b.add_argument("--png", metavar="DIR", help="also render every page to PNG in DIR (for previewing)")
     b.add_argument("--ppi", type=int, default=70, help="resolution of the PNG previews")

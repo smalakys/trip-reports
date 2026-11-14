@@ -35,7 +35,8 @@ Use Python 3.11+ from `.venv`. A build takes a few seconds; there is no other to
 | New or changed field in the trip file | `schema.py`, then `document.py`, then `make schema` and update the example |
 | What a section contains, table columns, wording logic | `document.py` |
 | Fixed UI wording or a new language | `assets/locales/*.toml` (keep `lt` and `en` keys identical) |
-| Colours, fonts, margins, sizes | `assets/theme/default.toml` |
+| Colours, type, spacing, radii | `assets/design/tokens.json` (the LAA design system; read `docs/design-system/`) |
+| Page margins, image resolution | `assets/theme/default.toml` |
 | Page layout and typography | `assets/templates/report.typ` (renders `data.json`, contains no content) |
 | Route map or elevation profile | `plots.py` (inputs are plain arrays; returns height/width ratio) |
 | GPX statistics | `gpxstats.py` (pure functions; keep them unit-tested) |
@@ -51,4 +52,5 @@ Use Python 3.11+ from `.venv`. A build takes a few seconds; there is no other to
   break or inject markup.
 - Keep `plots.py` and `gpxstats.py` free of file-system and global state beyond their arguments;
   a server will call them.
+- Follow the design system: one orange (`accent-text` for small orange text, never `brand`), flat and sharp, no gradients, nothing set over the title photo, figures titled with the finding, numbers tabular, dates ISO. `docs/design-system/` is a verbatim copy of the system's documents; do not edit it.
 - Do not commit generated output (`out/`, `.build-*`) or real trips' private data.
