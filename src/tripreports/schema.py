@@ -86,6 +86,13 @@ class Day(_Model):
     text: LText = Field(description="Diary text. Blank line = new paragraph; **bold**, *italic*.")
 
 
+class TrackFile(_Model):
+    """One GPX file of a trip with several. Each file gets its own route map and elevation profile."""
+
+    file: str = Field(description="Path relative to the trip folder.")
+    name: LText | None = Field(None, description="Heading above this track's map and profile, e.g. the peak.")
+
+
 class Photo(_Model):
     file: str = Field(description="Path relative to the trip folder.")
     caption: LText
@@ -163,7 +170,12 @@ class Trip(_Model):
     support: LText | None = None
     acclimatisation: LText | None = None
     days: list[Day] = Field(default_factory=list)
-    gpx: str = Field("track.gpx", description="Path relative to the trip folder.")
+    gpx: str | list[TrackFile] = Field(
+        "track.gpx",
+        description="Path relative to the trip folder, or a list of files (for example one per peak of an "
+                    "expedition). The statistics use all of them; each file gets its own map and profile. "
+                    "Diary days outside every file's dates (travel, rest in base camp) have no track.",
+    )
     map: MapSettings = Field(default_factory=MapSettings)
     photos: list[Photo] = Field(default_factory=list)
     references: list[str] = Field(default_factory=list)
@@ -178,8 +190,13 @@ class Trip(_Model):
     )
     show_contents: bool = True
 
+    def gpx_files(self) -> list[TrackFile]:
+        return [TrackFile(file=self.gpx)] if isinstance(self.gpx, str) else list(self.gpx)
+
     @model_validator(mode="after")
     def _check(self) -> Trip:
+        if isinstance(self.gpx, list) and not self.gpx:
+            raise ValueError("gpx: give at least one file")
         if self.end_date < self.start_date:
             raise ValueError("end_date is before start_date")
         for p in self.peaks:

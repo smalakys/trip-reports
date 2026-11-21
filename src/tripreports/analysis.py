@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -12,6 +12,20 @@ import numpy as np
 from . import gpxstats as gs
 from .plots import DayPoint, PeakMark
 from .schema import Trip
+
+
+@dataclass
+class GroupView:
+    """One GPX file of several: its track and what its map and profile show."""
+
+    name: object                 # heading above its figures (LText or None)
+    track: gs.Track
+    day_start_idx: list[int]     # indices into the group's own track
+    rest_spans: list[tuple[dt.datetime, dt.datetime]]
+    peaks: list[PeakMark]        # summits reached within the group
+    distance_m: float            # calibrated like the day rows, so headlines match the tables
+    ascent_m: float
+    n_days: int
 
 
 @dataclass
@@ -24,21 +38,32 @@ class Analysis:
     peaks: list[PeakMark]
     warnings: list[str]
     factors: dict | None = None    # distance / ascent / descent scale factors when calibrated
+    groups: list[GroupView] = field(default_factory=list)
 
 
 def analyse(trip: Trip, trip_dir: Path) -> Analysis:
-    track = gs.load_gpx(trip_dir / trip.gpx, trip.timezone)
+    files = trip.gpx_files()
+    track = gs.load_gpx([trip_dir / f.file for f in files], trip.timezone)
+    parts = [gs.load_gpx(trip_dir / f.file, trip.timezone) for f in files] if len(files) > 1 else []
+    shift = dt.timedelta(hours=trip.day_cutoff_hour)
+    spans = [((p.t[0] - shift).date(), (p.t[-1] - shift).date()) for p in parts]
     tz = ZoneInfo(trip.timezone)
     warnings: list[str] = []
 
     dates = sorted({d.date for d in trip.days}) or [
         trip.start_date + dt.timedelta(days=i) for i in range((trip.end_date - trip.start_date).days + 1)
     ]
+
+    def in_span(date: dt.date) -> bool:
+        return any(a <= date <= b for a, b in spans)
+
     days, starts = [], []
     for date in dates:
         ds = gs.day_stats(track, date, trip.day_cutoff_hour)
         if ds is None:
-            warnings.append(f"no GPX points on {date}")
+            # with several files, days outside them (travel, rest in base camp) have no track
+            if not parts or in_span(date):
+                warnings.append(f"no GPX points on {date}")
             continue
         days.append(ds)
         starts.append(int(np.flatnonzero(track.t == ds.start)[0]))
@@ -76,6 +101,17 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
         totals["descent_m"] *= f_down
         factors = {"distance": f_dist, "ascent": f_up, "descent": f_down}
 
+    groups = []
+    for f, sub, (first, last) in zip(files if parts else [], parts, spans, strict=True):
+        g_days = [d for d in days if first <= d.date <= last]
+        g_starts = [int(np.flatnonzero(sub.t == d.start)[0]) for d in g_days]
+        g_peaks = [m for m in marks if m.time is not None and sub.t[0] <= m.time <= sub.t[-1]]
+        groups.append(GroupView(
+            name=f.name, track=sub, day_start_idx=g_starts, rest_spans=gs.rests(sub), peaks=g_peaks,
+            distance_m=float(sum(d.distance_m for d in g_days)),
+            ascent_m=float(sum(d.ascent_m for d in g_days)),
+            n_days=(last - first).days + 1))
+
     return Analysis(
         track=track,
         days=days,
@@ -85,6 +121,7 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
         peaks=marks,
         warnings=warnings,
         factors=factors,
+        groups=groups,
     )
 
 

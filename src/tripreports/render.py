@@ -481,6 +481,12 @@ class Report(BaseDocTemplate):
                 story.append(Spacer(1, 12))
             elif t == "figure":
                 story.append(self.figure(b))
+            elif t == "figure_group":     # a heading and its map and profile, kept on one page
+                if b["newpage"]:
+                    story.append(PageBreak())
+                head = [*self.heading(b["title"], 1), Spacer(1, 4)] if b["title"] else []
+                # flat list: a KeepTogether inside another always reports itself too tall to fit
+                story.append(KeepTogether([*head, *[x for f in b["figures"] for x in self.figure_parts(f)]]))
             elif t == "contents":
                 if not first:   # right after the title page it already starts a fresh page
                     story.append(PageBreak())
@@ -567,6 +573,9 @@ class Report(BaseDocTemplate):
 
     # ---- figures and photos ----------------------------------------------------------------
     def figure(self, b: dict) -> KeepTogether:
+        return KeepTogether(self.figure_parts(b))
+
+    def figure_parts(self, b: dict) -> list:
         S = self.styles
         parts = [Paragraph(markup(b["headline"]), S["fig_title"]), Paragraph(markup(b["subtitle"]), S["fig_sub"]),
                  Vector(self.build_dir / b["image"], self.tw,
@@ -576,7 +585,7 @@ class Report(BaseDocTemplate):
         if b["caption"]:
             parts.append(Paragraph(markup(b["caption"]), S["caption"]))
         parts.append(Spacer(1, 14))
-        return KeepTogether(parts)
+        return parts
 
     def photo_pages(self, b: dict) -> list:
         out: list = []

@@ -541,6 +541,41 @@
       ],
       "title": "Section",
       "type": "object"
+    },
+    "TrackFile": {
+      "additionalProperties": false,
+      "description": "One GPX file of a trip with several. Each file gets its own route map and elevation profile.",
+      "properties": {
+        "file": {
+          "description": "Path relative to the trip folder.",
+          "title": "File",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading above this track's map and profile, e.g. the peak.",
+          "title": "Name"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "TrackFile",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -824,10 +859,20 @@
       "type": "array"
     },
     "gpx": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/TrackFile"
+          },
+          "type": "array"
+        }
+      ],
       "default": "track.gpx",
-      "description": "Path relative to the trip folder.",
-      "title": "Gpx",
-      "type": "string"
+      "description": "Path relative to the trip folder, or a list of files (for example one per peak of an expedition). The statistics use all of them; each file gets its own map and profile. Diary days outside every file's dates (travel, rest in base camp) have no track.",
+      "title": "Gpx"
     },
     "map": {
       "$ref": "#/$defs/MapSettings"

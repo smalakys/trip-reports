@@ -52,14 +52,18 @@ def haversine(lat1, lon1, lat2, lon2):
     return 2 * EARTH_R * np.arcsin(np.sqrt(a))
 
 
-def load_gpx(path: str | Path, tz_name: str) -> Track:
+def load_gpx(path: str | Path | list[str | Path], tz_name: str) -> Track:
+    """Load one GPX file, or several as one track in time order."""
     tz = ZoneInfo(tz_name)
-    with open(path, encoding="utf-8") as fh:
-        gpx = gpxpy.parse(fh)
-    pts = [p for trk in gpx.tracks for seg in trk.segments for p in seg.points
-           if p.time is not None and p.elevation is not None]
+    paths = path if isinstance(path, list) else [path]
+    pts = []
+    for one in paths:
+        with open(one, encoding="utf-8") as fh:
+            gpx = gpxpy.parse(fh)
+        pts += [p for trk in gpx.tracks for seg in trk.segments for p in seg.points
+                if p.time is not None and p.elevation is not None]
     if len(pts) < 2:
-        raise ValueError(f"{path}: need a track with timestamps and elevation")
+        raise ValueError(f"{', '.join(map(str, paths))}: need a track with timestamps and elevation")
     pts.sort(key=lambda p: p.time)
     t = np.array([p.time.astimezone(tz) for p in pts], dtype=object)
     lat = np.array([p.latitude for p in pts])

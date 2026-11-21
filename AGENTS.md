@@ -14,6 +14,7 @@ make setup                      # once: .venv + editable install
 .venv/bin/tripreport validate <trip-dir>
 .venv/bin/tripreport build <trip-dir> --lang lt --png /tmp/pages --ppi 80
 .venv/bin/tripreport clean-gpx in.gpx out.gpx    # strip heart rate etc. (always do this for a new GPX)
+.venv/bin/tripreport merge-gpx d1.gpx d2.gpx out.gpx --keep <trip-dir>/gpx-days   # daily files: clean, keep, merge
 make test                       # must pass before you finish (works offline)
 make schema                     # after changing src/tripreports/schema.py
 make sample                     # fictional sample trip in reports/sample (git-ignored) to look at
@@ -31,6 +32,10 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 2. GPX: run it through `clean-gpx` first (it removes heart rate, cadence and power: private data
    that must never reach the repository) and keep full point resolution (`--every 1`), because
    thinning the track shortens distance and ascent. Set `timezone` to the zone the track was recorded in.
+   Daily files go through `merge-gpx --keep <trip-dir>/gpx-days` (cleaned originals kept, merged track
+   written); check each file's first timestamp, file names can carry the wrong date. An expedition with
+   several climbs gets one merged file per climb, listed as `gpx: [{file, name}, ...]`: each gets its own
+   map and profile page.
 3. Totals: GPS altitude is noisy. If the user trusts other figures (a guidebook, or a service with
    elevation correction), put them in `calibration:` (`distance_km`, `ascent_m`); every day's figures
    are scaled to match. Do not override computed numbers the user has not given.

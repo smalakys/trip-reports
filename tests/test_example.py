@@ -146,3 +146,65 @@ def test_clean_gpx_removes_sensor_data(tmp_path):
     text = out.read_text(encoding="utf-8")
     assert "hr" not in text and "gpxtpx" not in text
     assert text.count("<trkpt") == 6      # every 2nd point of 10, plus the last
+
+
+def _gpx(day: int, hr: bool = True) -> str:
+    ext = ("<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>90</gpxtpx:hr></gpxtpx:TrackPointExtension>"
+           "</extensions>") if hr else ""
+    return ('<?xml version="1.0"?><gpx version="1.1" creator="x" xmlns="http://www.topografix.com/GPX/1/1" '
+            'xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><trkseg>'
+            + "".join(f'<trkpt lat="46.{i:03d}" lon="8.{i:03d}"><ele>{1000 + i}</ele>'
+                      f"<time>2025-08-{day:02d}T07:{i:02d}:00Z</time>{ext}</trkpt>" for i in range(5))
+            + "</trkseg></trk></gpx>")
+
+
+def test_merge_gpx_cleans_and_orders_daily_files(tmp_path):
+    from tripreports.cli import main
+    from tripreports.gpxstats import load_gpx
+
+    for day in (12, 10, 11):      # given out of order on purpose
+        (tmp_path / f"day{day}.gpx").write_text(_gpx(day), encoding="utf-8")
+    out, keep = tmp_path / "merged.gpx", tmp_path / "days"
+    srcs = [str(tmp_path / f"day{d}.gpx") for d in (12, 10, 11)]
+    assert main(["merge-gpx", *srcs, str(out), "--keep", str(keep)]) == 0
+    text = out.read_text(encoding="utf-8")
+    assert "hr" not in text and text.count("<trkpt") == 15
+    assert text.index("2025-08-10") < text.index("2025-08-11") < text.index("2025-08-12")
+    assert sorted(p.name for p in keep.iterdir()) == ["day10.gpx", "day11.gpx", "day12.gpx"]
+    assert "hr" not in (keep / "day10.gpx").read_text(encoding="utf-8")
+    assert len(load_gpx(out, "Europe/Zurich")) == 15
+
+
+def test_several_track_files_get_a_map_and_profile_each(trip_copy):
+    import shutil
+
+    import gpxpy
+    import gpxpy.gpx
+
+    from tripreports.build import build_report
+    from tripreports.gpxstats import load_gpx
+
+    # split the sample track into two files at the start of its fourth day
+    gpx = gpxpy.parse((trip_copy / "track.gpx").read_text(encoding="utf-8"))
+    pts = [p for t in gpx.tracks for s in t.segments for p in s.points]
+    track = load_gpx(trip_copy / "track.gpx", "Europe/Zurich")
+    cut = next(i for i, t in enumerate(track.t) if t.date() >= dt.date(2025, 8, 13))
+    for name, part in (("a.gpx", pts[:cut]), ("b.gpx", pts[cut:])):
+        g = gpxpy.gpx.GPX()
+        trk = gpxpy.gpx.GPXTrack()
+        seg = gpxpy.gpx.GPXTrackSegment()
+        seg.points = part
+        trk.segments.append(seg)
+        g.tracks.append(trk)
+        (trip_copy / name).write_text(g.to_xml(), encoding="utf-8")
+    (trip_copy / "track.gpx").unlink()
+    edit_trip(trip_copy, gpx=[{"file": "a.gpx", "name": "Pirmoji dalis"}, {"file": "b.gpx", "name": "Antroji dalis"}])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert res.warnings == []
+    assert len(res.analysis.groups) == 2 and len(res.analysis.days) == 5
+    assert [len(g.day_start_idx) for g in res.analysis.groups] == [3, 2]
+    assets = sorted(p.name for p in (res.build_dir / "assets").glob("*.svg"))
+    assert "route-map-1.svg" in assets and "elevation-profile-2.svg" in assets
+    text = _text(res.pdf)
+    assert "Pirmoji dalis" in text and "Antroji dalis" in text
+    shutil.rmtree(res.build_dir)

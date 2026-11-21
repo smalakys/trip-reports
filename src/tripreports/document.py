@@ -53,6 +53,18 @@ class Assets:
     acc_ratio: float = 0.0
     acc_delta_m: float = 0.0
     photos: list[tuple[str, tuple[int, int]]] = field(default_factory=list)
+    groups: list[GroupFigures] = field(default_factory=list)   # one map and profile per figure group
+
+
+@dataclass
+class GroupFigures:
+    """The route map and elevation profile prepared for one figure group."""
+
+    route_map: str
+    route_map_ratio: float
+    profile: str
+    profile_ratio: float
+    route_map_under: str | None = None
 
 
 def _table(columns, rows, **extra):
@@ -272,22 +284,33 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
 
     # ---- figures ---------------------------------------------------------------------------
     h1(ui("figures"), newpage=True)
-    days_txt = loc.fig("single_day") if n_days == 1 else loc.days(n_days)
     source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
-    blocks.append({
-        "type": "figure",
-        "headline": loc.fig("route_title").format(distance=loc.km(t["distance_m"], 0), days=days_txt),
-        "subtitle": loc.fig("route_subtitle_single" if n_days == 1 else "route_subtitle"),
-        "image": assets.route_map, "under": assets.route_map_under, "ratio": assets.route_map_ratio,
-        "source": source_map, "caption": "",
-    })
-    blocks.append({
-        "type": "figure",
-        "headline": loc.fig("profile_title").format(ascent=loc.gain(t["ascent_m"]), days=days_txt),
-        "subtitle": loc.fig("profile_subtitle"),
-        "image": assets.profile, "ratio": assets.profile_ratio,
-        "source": "", "caption": "",
-    })
+
+    def map_and_profile(route_map, under, map_ratio, profile, profile_ratio, distance_m, ascent_m, days):
+        days_txt = loc.fig("single_day") if days == 1 else loc.days(days)
+        return [{
+            "type": "figure",
+            "headline": loc.fig("route_title").format(distance=loc.km(distance_m, 0), days=days_txt),
+            "subtitle": loc.fig("route_subtitle_single" if days == 1 else "route_subtitle"),
+            "image": route_map, "under": under, "ratio": map_ratio,
+            "source": source_map, "caption": "",
+        }, {
+            "type": "figure",
+            "headline": loc.fig("profile_title").format(ascent=loc.gain(ascent_m), days=days_txt),
+            "subtitle": loc.fig("profile_subtitle"),
+            "image": profile, "ratio": profile_ratio,
+            "source": "", "caption": "",
+        }]
+
+    if an.groups:
+        for i, (g, f) in enumerate(zip(an.groups, assets.groups, strict=True)):
+            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": i > 0,
+                           "figures": map_and_profile(f.route_map, f.route_map_under, f.route_map_ratio,
+                                                      f.profile, f.profile_ratio, g.distance_m, g.ascent_m,
+                                                      g.n_days)})
+    else:
+        blocks += map_and_profile(assets.route_map, assets.route_map_under, assets.route_map_ratio,
+                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days)
     if assets.acc:
         blocks.append({
             "type": "figure",

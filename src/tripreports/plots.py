@@ -188,6 +188,7 @@ def elevation_profile(
     loc: Locale,
     out: Path,
     rest_labels: list[str | None] | None = None,
+    height_ratio: float = 0.44,
 ) -> float:
     """Altitude against time, filled to the baseline, summits called out. Returns height/width.
 
@@ -197,7 +198,7 @@ def elevation_profile(
     fonts = setup_style(theme)
     c = theme["colors"]
     width_in = text_width_mm(theme) * MM
-    height_in = width_in * 0.44
+    height_in = width_in * height_ratio
     fig, ax = plt.subplots(figsize=(width_in, height_in))
 
     naive = [x.replace(tzinfo=None) for x in track.t]
@@ -472,8 +473,12 @@ def route_map(
         ax.plot(x, y, color=c["series-1"], lw=2 * PX * 1.3, solid_joinstyle="round", zorder=4)
 
     badges = []
+    pt = 2 * half_w / (width_in * 72)    # data units per point
     for n, s in enumerate(day_starts, start=1):
         bx, by = _merc(track.lat[s], track.lon[s])
+        # a day starting where another did (back at the same camp) sits beside it, not under it
+        while any(math.hypot(bx - ox, by - oy) < 11 * pt for ox, oy in badges):
+            bx += 12 * pt
         ax.plot([bx], [by], marker="o", ms=11, mfc=c["surface-inverse"], mec=c["surface-000"],
                 mew=1.2, zorder=7)
         ax.text(bx, by, str(n), color=c["ink-inverse"], fontproperties=fonts.tick, ha="center",

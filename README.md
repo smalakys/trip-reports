@@ -31,6 +31,8 @@ folder looks like and what the report looks like; the tests build the same trip.
 tripreport sample reports/sample                    # a fictional trip to try the tool on
 tripreport init reports/my-climb                    # new trip folder with a starter trip.yaml
 tripreport clean-gpx in.gpx reports/my-climb/track.gpx --every 1   # keep position, altitude, time only
+tripreport merge-gpx day1.gpx day2.gpx reports/my-climb/track.gpx --keep reports/my-climb/gpx-days
+                                                    # clean daily files, keep them, join them in time order
 tripreport validate reports/my-climb                # check the file, referenced files and the track
 tripreport build reports/my-climb --lang lt         # PDF in reports/my-climb/out/
 tripreport build reports/my-climb --png /tmp/pages  # also render every page to PNG for a quick look
@@ -87,7 +89,13 @@ Points worth knowing:
   `basemap.json` in the trip folder, so later builds are offline; delete them to refetch. The attribution
   line is added automatically.
 - **GPX files:** `tripreport clean-gpx in.gpx out.gpx` keeps only position, altitude and time, so heart
-  rate and other sensor data never reach the repository.
+  rate and other sensor data never reach the repository. A watch that records one file per day:
+  `tripreport merge-gpx day1.gpx day2.gpx ... track.gpx --keep gpx-days` cleans every file, keeps the
+  cleaned daily files in `gpx-days/` and writes the merged track.
+- **Several tracks:** an expedition with more than one climb can list one file per climb,
+  `gpx: [{file: peak-a.gpx, name: Peak A}, {file: peak-b.gpx, name: Peak B}]`. Tables and totals use all
+  of them; each file gets its own route map and elevation profile under its name. Diary days outside
+  every file's dates (travel, rest in base camp) need no track.
 
 ## Changing the look
 
