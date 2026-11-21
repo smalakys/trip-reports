@@ -87,6 +87,12 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   all orange (no colour per day) with day-start numbers. The profile labels the nights with the hut
   names and named stops with `breaks`. No "source: GPS" lines and no captions; keep only the map-tile
   attribution. The climb-high-sleep-low chart is optional (`acclimatisation_chart: true`), off by default.
+- High-altitude class ("Aukštuminė klasė") reports always set `base_camp` (altitude, arrival, departure).
+  Then the daily table lists every day of the stay with a "Nakvynė" column (days without a track greyed
+  out as rest days) followed by the whole-expedition altitude chart, and there is no separate table of
+  nights. Give every night away from base camp an `accommodation`
+  entry with its altitude, describe the camps once in `camps` (one table per mountain under
+  "Nakvynės"), and add `high_point_m` to diary days that went high without a track.
 - Dates are ISO, times 24 h, durations `h:mm`, gains with a sign (`+6 119 m`), thousands separated by a
   non-breaking space in Lithuanian.
 - Keep the optional layout rules robust: a lone, unadorned route group has no heading row; short tables

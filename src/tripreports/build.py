@@ -124,6 +124,15 @@ def build_report(
             route_map_under=f"assets/route-map-base{sfx}.jpg" if base_image is not None else None,
             profile=f"assets/elevation-profile{sfx}.svg", profile_ratio=prof_ratio))
 
+    alt_file, alt_ratio = None, 0.0
+    if an.expedition:
+        index = {d.date: i for i, d in enumerate(an.expedition)}
+        summits = [(p.name, p.elevation_m, index[p.time.date()]) for p in an.peaks
+                   if p.time is not None and p.time.date() in index]
+        alt_file = "assets/altitude-chart.svg"
+        alt_ratio = plots.altitude_chart(an.expedition, summits, trip.base_camp.altitude_m, theme, loc,
+                                         assets_dir / "altitude-chart.svg")
+
     acc_file, acc_ratio, acc_delta = None, 0.0, 0.0
     if trip.acclimatisation_chart and len(an.days) >= 3:
         points, summit = acclimatisation_points(an, lambda n: f"{loc.ui('day')} {n}")
@@ -137,7 +146,7 @@ def build_report(
                     route_map_under=first.route_map_under, map_attribution=map_note,
                     profile=first.profile, profile_ratio=first.profile_ratio,
                     acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos,
-                    groups=figures if an.groups else [])
+                    groups=figures if an.groups else [], alt_chart=alt_file, alt_chart_ratio=alt_ratio)
     doc = build_document(trip, an, assets, theme, lang)
     (build_dir / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     render_pdf(doc, out_pdf, build_dir)

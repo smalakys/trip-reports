@@ -110,6 +110,8 @@ def make_styles(pal: Palette, lang: str, justify: bool) -> dict[str, ParagraphSt
                              spaceAfter=14, keepWithNext=1, hyphenationLang=None)
     s["h2"] = ParagraphStyle("h2", parent=body, fontName=SEMI, fontSize=16, leading=20, alignment=TA_LEFT,
                              spaceBefore=16, spaceAfter=6, keepWithNext=1, hyphenationLang=None)
+    s["h3"] = ParagraphStyle("h3", parent=body, fontName=SEMI, fontSize=12, leading=15, alignment=TA_LEFT,
+                             spaceBefore=10, spaceAfter=2, keepWithNext=1, hyphenationLang=None)
     s["bullet"] = ParagraphStyle("bullet", parent=body, leftIndent=12, spaceAfter=2.5, alignment=TA_LEFT)
     s["cell"] = ParagraphStyle("cell", parent=body, fontSize=9.5, leading=11.6, alignment=TA_LEFT,
                                spaceAfter=0, hyphenationLang=None)
@@ -119,6 +121,8 @@ def make_styles(pal: Palette, lang: str, justify: bool) -> dict[str, ParagraphSt
     s["cell_k"] = ParagraphStyle("cell_k", parent=s["cell"], fontName=SEMI, textColor=pal.accent)
     s["cell_b"] = ParagraphStyle("cell_b", parent=s["cell"], fontName=SEMI)
     s["cell_br"] = ParagraphStyle("cell_br", parent=s["cell_b"], alignment=TA_RIGHT)
+    s["cell_m"] = ParagraphStyle("cell_m", parent=s["cell"], textColor=pal.muted)        # greyed-out row
+    s["cell_mk"] = ParagraphStyle("cell_mk", parent=s["cell_m"], fontName=SEMI)
     s["caption"] = ParagraphStyle("caption", parent=body, fontSize=9.5, leading=12, alignment=TA_LEFT,
                                   textColor=pal.muted, spaceBefore=2, spaceAfter=0, hyphenationLang=None)
     s["fig_title"] = ParagraphStyle("fig_title", parent=body, fontName=SEMI, fontSize=14, leading=17,
@@ -433,7 +437,7 @@ class Report(BaseDocTemplate):
     def heading(self, text: str, level: int, prefix: str = "", skip_toc: bool = False) -> list:
         self._n += 1
         key = f"h{self._n}"
-        style = self.styles["h1" if level == 0 else "h2"]
+        style = self.styles[("h1", "h2", "h3")[level]]
         label = escape(text)
         if prefix:
             hexcol = "#" + self.pal.accent.hexval()[2:]
@@ -454,6 +458,8 @@ class Report(BaseDocTemplate):
                     story += [CondPageBreak(160), Spacer(1, 26)]
                 story += self.heading(b["text"], 0)
                 first = False
+            elif t == "h3":
+                story += self.heading(b["text"], 2)
             elif t == "h2":
                 story += self.heading(b["text"], 1, b["prefix"])
             elif t == "paras":
@@ -551,7 +557,11 @@ class Report(BaseDocTemplate):
                     key = b.get("key_first") and ci == 0
                     sty = ("cell_k" if key else ("cell_br" if right else "cell_b")) if (key or bold) else (
                         "cell_r" if right else "cell")
+                    if is_dict and cell.get("muted"):
+                        sty = "cell_mk" if key else "cell_m"
                     out.append(Paragraph(markup(txt), S[sty]))
+                    if span > 1:
+                        styles.append(("SPAN", (ci, r), (ci + span - 1, r)))
                 out += [""] * (span - 1)
                 ci += span
             data.append(out + [""] * (ncols - len(out)))

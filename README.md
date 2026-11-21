@@ -79,6 +79,13 @@ Points worth knowing:
 - **Text markup:** blank line = paragraph; `**bold**`, `*italic*`.
 - **Title-page numbers:** `cover_stats` picks the headline numbers (two to five, the first in the accent colour) from `highest_point`, `ascent`, `descent`, `distance`, `peaks`, `days`, `net_time`, `vertical_range`. The default suits a multi-day climb; choose others for other kinds of report.
 - **Profile labels:** nights on the elevation profile are named after the `accommodation` entry for that date; `breaks:` names a long daytime stop (`{date, place}`, e.g. a hut). The optional climb-high-sleep-low chart is switched on with `acclimatisation_chart: true`.
+- **High-altitude expeditions:** give `base_camp: {altitude_m, arrival, departure}`. The daily table then
+  lists every day of the stay with where its night was spent (nights from `accommodation`, every other
+  night at base camp) and greys out days without a track; the separate table of nights is left out.
+  Right after that table comes a chart of the whole stay: each day's lowest-to-highest range as a bar
+  and the nights as a line. `camps` (name, altitude, group, note) describes the camps once, one
+  table per mountain. A day without a track that went higher than its camps can say so with
+  `high_point_m` in its diary entry.
 - **Calibration:** GPS altitude is noisy, so computed ascent is rarely exact. `calibration:` (`distance_km`, `ascent_m`, optional `descent_m`) sets the totals you trust; every day's figures are scaled by the same factor so tables still add up. Day texts can use `{distance}`, `{ascent}`, `{descent}`, `{duration}`, `{hours}`, `{max_alt}`, `{min_alt}` to quote that day's figures.
 - **Grades:** give a route group `grade` (as the guidebook writes it) and `grade_system` (Alpine, UIAA, Cat.); they become badges.
 - **Dates and numbers:** dates are ISO, times 24 h, durations `h:mm`, in every language.

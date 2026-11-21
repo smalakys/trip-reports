@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from . import gpxstats as gs
-from .plots import DayPoint, PeakMark
+from .plots import AltDay, DayPoint, PeakMark
 from .schema import Trip
 
 
@@ -39,6 +39,7 @@ class Analysis:
     warnings: list[str]
     factors: dict | None = None    # distance / ascent / descent scale factors when calibrated
     groups: list[GroupView] = field(default_factory=list)
+    expedition: list[AltDay] = field(default_factory=list)   # base camp stay, when base_camp is set
 
 
 def analyse(trip: Trip, trip_dir: Path) -> Analysis:
@@ -47,6 +48,8 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
     parts = [gs.load_gpx(trip_dir / f.file, trip.timezone) for f in files] if len(files) > 1 else []
     shift = dt.timedelta(hours=trip.day_cutoff_hour)
     spans = [((p.t[0] - shift).date(), (p.t[-1] - shift).date()) for p in parts]
+    # files that get their own map and profile (the others only count in the tables)
+    plotted = [(f, p, span) for f, p, span in zip(files if parts else [], parts, spans, strict=True) if f.figures]
     tz = ZoneInfo(trip.timezone)
     warnings: list[str] = []
 
@@ -61,8 +64,9 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
     for date in dates:
         ds = gs.day_stats(track, date, trip.day_cutoff_hour)
         if ds is None:
-            # with several files, days outside them (travel, rest in base camp) have no track
-            if not parts or in_span(date):
+            # with several files, days outside them (travel, rest in base camp) have no track; with a
+            # base camp, neither has a day that starts and ends in the same camp (a rest day)
+            if (not parts or in_span(date)) and not resting(trip, date):
                 warnings.append(f"no GPX points on {date}")
             continue
         days.append(ds)
@@ -102,7 +106,7 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
         factors = {"distance": f_dist, "ascent": f_up, "descent": f_down}
 
     groups = []
-    for f, sub, (first, last) in zip(files if parts else [], parts, spans, strict=True):
+    for f, sub, (first, last) in plotted:
         g_days = [d for d in days if first <= d.date <= last]
         g_starts = [int(np.flatnonzero(sub.t == d.start)[0]) for d in g_days]
         g_peaks = [m for m in marks if m.time is not None and sub.t[0] <= m.time <= sub.t[-1]]
@@ -122,6 +126,7 @@ def analyse(trip: Trip, trip_dir: Path) -> Analysis:
         warnings=warnings,
         factors=factors,
         groups=groups,
+        expedition=expedition_days(trip, days),
     )
 
 
@@ -145,3 +150,51 @@ def acclimatisation_points(an: Analysis, day_label) -> tuple[list[DayPoint], tup
                 summit = (top.name, top.elevation_m, i)
                 break
     return points, summit
+
+
+def night_at(trip: Trip, date: dt.date) -> float | None:
+    """Altitude of the night after ``date``: its accommodation entry, else base camp during the stay.
+    None when the trip has no base camp or the date is outside the stay."""
+    bc = trip.base_camp
+    if bc is None or not bc.arrival <= date < bc.departure:
+        return None
+    slept = {a.date: a.altitude_m for a in trip.accommodation if a.altitude_m is not None}
+    return slept.get(date, bc.altitude_m)
+
+
+def resting(trip: Trip, date: dt.date) -> bool:
+    """A day that starts and ends in the same camp of a base camp stay (needs no track)."""
+    before, after = night_at(trip, date - dt.timedelta(days=1)), night_at(trip, date)
+    return before is not None and before == after
+
+
+def expedition_days(trip: Trip, days: list[gs.DayStats]) -> list[AltDay]:
+    """Every day from arrival at base camp to departure: where it started and ended (the nights before
+    and after it), its lowest and highest point, and where the night after it was spent.
+
+    A night with an accommodation entry is at that altitude, every other night at base camp. A day
+    with a track takes its lowest and highest point from it; a day without one (rest, a day in a high
+    camp) spans the nights before and after it, and ``high_point_m`` of its diary entry. The range
+    always includes both nights, so a camp never sits outside its day's bar.
+    """
+    bc = trip.base_camp
+    if bc is None:
+        return []
+    slept = {a.date: a.altitude_m for a in trip.accommodation if a.altitude_m is not None}
+    tracked = {d.date: d for d in days}
+    high_points = {d.date: d.high_point_m for d in trip.days if d.high_point_m is not None}
+    out: list[AltDay] = []
+    before = bc.altitude_m
+    date = bc.arrival
+    while date <= bc.departure:
+        night = None if date == bc.departure else slept.get(date, bc.altitude_m)
+        ends = [before] + ([night] if night is not None else [])
+        lo, hi = min(ends), max(ends)
+        if date in tracked:
+            lo, hi = min(lo, tracked[date].min_alt_m), max(hi, tracked[date].max_alt_m)
+        if date in high_points:
+            hi = max(hi, high_points[date])
+        out.append(AltDay(date, before, night if night is not None else bc.altitude_m, lo, hi, night))
+        before = night if night is not None else before
+        date += dt.timedelta(days=1)
+    return out

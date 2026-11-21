@@ -40,6 +40,18 @@ class PeakMark:
 
 
 @dataclass
+class AltDay:
+    """One day of the expedition altitude chart."""
+
+    date: dt.date
+    open_m: float           # where the day started: the night before (base camp on arrival)
+    close_m: float          # where it ended: the night after (base camp on departure)
+    low_m: float
+    high_m: float
+    night_m: float | None   # altitude slept at after this day; None on the day the stay ends
+
+
+@dataclass
 class DayPoint:
     """One day of the climb-high-sleep-low chart."""
 
@@ -180,6 +192,41 @@ def _flag_layout(labels: list[tuple[float, float]], left_limit: float) -> list[t
 # Elevation profile
 # --------------------------------------------------------------------------------------------
 
+def _strip_rows(extents: list[tuple[float, float]], pad: float = 6.0) -> list[int]:
+    """Row for each label in a strip, given its (x0, x1) in pixels: the lowest row where it does not
+    overlap a label already placed (``pad`` pixels apart)."""
+    rows: list[int] = []
+    placed: list[tuple[float, float, int]] = []
+    for x0, x1 in extents:
+        row = 0
+        while any(r == row and not (x1 + pad < o0 or x0 > o1 + pad) for o0, o1, r in placed):
+            row += 1
+        rows.append(row)
+        placed.append((x0, x1, row))
+    return rows
+
+
+def _day_axis(t0: dt.datetime, t1: dt.datetime, min_hours: float = 4.0
+              ) -> tuple[list[tuple[dt.date, dt.datetime]], list[dt.datetime]]:
+    """Day labels and midnight lines for a profile running from ``t0`` to ``t1`` (naive local times).
+
+    Every calendar day in the span is labelled at the middle of its visible part, including days
+    without track points (a rest day in a tent); only a sliver of a day at either end, shorter
+    than ``min_hours``, goes unlabelled. Returns ([(date, label position)], [midnights inside]).
+    """
+    labelled, midnights = [], []
+    d = t0.date()
+    while d <= t1.date():
+        start = dt.datetime.combine(d, dt.time(0))
+        lo, hi = max(start, t0), min(start + dt.timedelta(days=1), t1)
+        if hi - lo >= dt.timedelta(hours=min_hours):
+            labelled.append((d, lo + (hi - lo) / 2))
+        if t0 < start < t1:
+            midnights.append(start)
+        d += dt.timedelta(days=1)
+    return labelled, midnights
+
+
 def elevation_profile(
     track: Track,
     rest_spans: list[tuple[dt.datetime, dt.datetime]],
@@ -231,6 +278,17 @@ def elevation_profile(
                           fontproperties=fonts.peak, color=c["ink"], zorder=6,
                           path_effects=_halo(c["surface-000"]))
         labels.append((p, x, name, num))
+    # rest labels: horizontal, centred on their grey band, in a strip at the top of the plot
+    rest_texts = []
+    for i, (a, b) in enumerate(rest_spans):
+        name = rest_labels[i] if rest_labels and i < len(rest_labels) else None
+        if name or (b - a) > dt.timedelta(hours=5):
+            a_, b_ = a.replace(tzinfo=None), b.replace(tzinfo=None)
+            rest_texts.append(ax.annotate(
+                name or loc.ui("night"), (mdates.date2num(a_ + (b_ - a_) / 2), 1.0),
+                xycoords=("data", "axes fraction"), xytext=(0, -3), textcoords="offset points",
+                ha="center", va="top", fontproperties=fonts.muted, color=c["ink-muted"], zorder=4,
+                path_effects=_halo(c["surface-200"], 2.5)))
     fig.subplots_adjust(left=0.075, right=0.995, top=0.99, bottom=0.1)
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
@@ -242,7 +300,11 @@ def elevation_profile(
     placed = [(*lab, row, side) for lab, (row, side) in zip(labels, slots, strict=True)]
     n_rows = max((row for row, _ in slots), default=0) + 1
     row_h, gap = 28.0, 14.0                      # points: height of one label row, dot-to-label gap
-    head_pts = gap + n_rows * row_h + 4          # headroom needed above the highest data point
+    # rest labels sit in a strip above the summit labels, one row more for each set that would overlap
+    strip_rows = _strip_rows([(r.get_window_extent(renderer).x0, r.get_window_extent(renderer).x1)
+                              for r in rest_texts])
+    strip_pts = (max(strip_rows) + 1) * 12.0 + 2 if rest_texts else 0.0
+    head_pts = gap + n_rows * row_h + 4 + strip_pts   # headroom needed above the highest data point
     axes_pts = ax.bbox.height * 72 / fig.dpi
     span = (hi_data - lo) / (1 - head_pts / axes_pts)
     ax.set_ylim(lo, lo + span)
@@ -260,27 +322,16 @@ def elevation_profile(
                 mec=c["series-1"], mew=2 * PX, zorder=5)
 
     # Axes: ISO day labels centred on each day, hairlines at midnight, rests labelled.
-    days = sorted({x.date() for x in naive})
-    t0, t1 = naive[0], naive[-1]
-    centres, names = [], []
-    for d in days:
-        lo_t = max(dt.datetime.combine(d, dt.time(0)), t0)
-        hi_t = min(dt.datetime.combine(d, dt.time(0)) + dt.timedelta(days=1), t1)
-        if hi_t - lo_t >= dt.timedelta(hours=4):
-            centres.append(mdates.date2num(lo_t) + (mdates.date2num(hi_t) - mdates.date2num(lo_t)) / 2)
-            names.append(loc.short_date(d))
-    ax.set_xticks(centres)
-    ax.set_xticklabels(names)
+    labelled, midnights = _day_axis(naive[0], naive[-1])
+    ax.set_xticks([mdates.date2num(c) for _, c in labelled])
+    ax.set_xticklabels([loc.short_date(d) for d, _ in labelled])
+    # midnight lines stop at the highest point, below the summit labels
+    ax.vlines([mdates.date2num(m) for m in midnights], lo, hi_data, color=c["line-strong"], lw=0.4,
+              zorder=2.5)
     _style_cartesian(ax, theme, fonts)
     ax.spines["bottom"].set_visible(True)
-    for i, (a, b) in enumerate(rest_spans):
-        name = rest_labels[i] if rest_labels and i < len(rest_labels) else None
-        if name or (b - a) > dt.timedelta(hours=5):
-            mid = mdates.date2num(a.replace(tzinfo=None)) + (
-                mdates.date2num(b.replace(tzinfo=None)) - mdates.date2num(a.replace(tzinfo=None))) / 2
-            ax.text(mid, lo + (hi_data - lo) * 0.02, name or loc.ui("night"), rotation=90, ha="center",
-                    va="bottom", fontproperties=fonts.muted, color=c["ink-muted"], zorder=4,
-                    path_effects=_halo(c["surface-200"], 2.5))
+    for text, row in zip(rest_texts, strip_rows, strict=True):
+        text.set_position((0, -3 - row * 12.0))
 
     fig.savefig(out, format="svg")
     plt.close(fig)
@@ -350,6 +401,100 @@ def acclimatisation_chart(
     _style_cartesian(ax, theme, fonts)
     ax.spines["bottom"].set_visible(True)
     fig.subplots_adjust(left=0.075, right=0.80, top=0.97, bottom=0.12)
+    fig.savefig(out, format="svg")
+    plt.close(fig)
+    return height_in / width_in
+
+
+def day_filled(day: AltDay, base_m: float) -> bool:
+    """Whether a day counts as the way up (orange) rather than the way down (grey): it ended at least as
+    high as it started, except a day that never left base camp."""
+    if day.high_m - day.low_m < 1 and day.close_m <= base_m:
+        return False
+    return day.close_m >= day.open_m
+
+
+def altitude_chart(
+    days: list[AltDay],
+    summits: list[tuple[str, float, int]],
+    base_m: float,
+    theme: dict,
+    loc: Locale,
+    out: Path,
+) -> float:
+    """The whole stay above base camp, one bar per day. Returns height/width.
+
+    A bar runs from the day's lowest to its highest point, without a border: shaded like the area under
+    an elevation profile when ``day_filled`` (the way up), in the grey of the profile's night bands
+    otherwise (the way down). A day spent in one place has no bar. A thick line marks each night at
+    its altitude and a thin line joins the nights from day to day. ``summits`` holds (name, official
+    altitude, day index); each is called out above its day.
+    """
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Rectangle
+
+    fonts = setup_style(theme)
+    c = theme["colors"]
+    width_in = text_width_mm(theme) * MM
+    height_in = width_in * 0.62      # it has a page of its own
+    fig, ax = plt.subplots(figsize=(width_in, height_in))
+
+    low = np.array([d.low_m for d in days])
+    high = np.array([d.high_m for d in days])
+    lo = _round_floor(low.min() - 100, 500)
+    top = float(high.max())
+    step = 500.0 if top - lo <= 2500 else 1000.0
+    ticks = _alt_ticks(lo, top, step)
+    bar_w, night_lw = 0.62, 2.6 * PX * 1.3
+    min_h = (top - lo) * 0.012          # less than this: the day was spent in one place
+
+    for i, d in enumerate(days):
+        if d.high_m - d.low_m >= min_h:   # a day spent in one place has no bar, only its night
+            ax.add_patch(Rectangle((i - bar_w / 2, d.low_m), bar_w, d.high_m - d.low_m, lw=0, zorder=3,
+                                   facecolor=c["chart-area"] if day_filled(d, base_m) else c["surface-200"]))
+        if d.night_m is not None:
+            ax.plot([i - bar_w / 2, i + bar_w / 2], [d.night_m] * 2, color=c["series-1"], lw=night_lw,
+                    solid_capstyle="butt", zorder=4)
+
+    # a thin line joins the nights from bar to bar, so their progression reads at a glance
+    path = [(x, d.night_m) for i, d in enumerate(days) if d.night_m is not None
+            for x in (i - bar_w / 2, i + bar_w / 2)]
+    if path:
+        px, py = zip(*path, strict=True)
+        ax.plot(px, py, color=c["series-1"], lw=0.9 * PX * 1.3, solid_joinstyle="round", zorder=4)
+
+    head = 0.22 if summits else 0.12       # room above for the summit labels and the key
+    ax.set_xlim(-0.7, len(days) - 0.3)
+    ax.set_ylim(lo, top + (top - lo) * head)
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([loc.num(v) for v in ticks])
+
+    # ISO dates, as many as fit: every day, or every second, third ... day
+    every = max(1, math.ceil(len(days) / 7))
+    shown = list(range(0, len(days), every))
+    ax.set_xticks(shown)
+    ax.set_xticklabels([loc.short_date(days[i].date) for i in shown])
+
+    for name, alt, i in summits:
+        ax.annotate(loc.metres(alt), (i, high[i]), xytext=(0, 18), textcoords="offset points",
+                    ha="center", va="bottom", fontproperties=fonts.peak, color=c["ink"],
+                    path_effects=_halo(c["surface-000"]), zorder=6, annotation_clip=False)
+        ax.annotate(name, (i, high[i]), xytext=(0, 5), textcoords="offset points", ha="center",
+                    va="bottom", fontproperties=fonts.muted, color=c["ink-muted"],
+                    path_effects=_halo(c["surface-000"]), zorder=6, annotation_clip=False)
+
+    key = [Rectangle((0, 0), 1, 1, facecolor=c["chart-area"], lw=0),
+           Rectangle((0, 0), 1, 1, facecolor=c["surface-200"], lw=0),
+           Line2D([], [], color=c["series-1"], lw=night_lw, solid_capstyle="butt")]
+    legend = ax.legend(key, [loc.ui("alt_up"), loc.ui("alt_down"), loc.ui("acc_sleep")], loc="upper left",
+                       frameon=False, prop=fonts.muted, handlelength=1.4, handleheight=0.9,
+                       borderaxespad=0.2, labelspacing=0.35)
+    for t in legend.get_texts():
+        t.set_color(c["ink-muted"])
+
+    _style_cartesian(ax, theme, fonts)
+    ax.spines["bottom"].set_visible(True)
+    fig.subplots_adjust(left=0.075, right=0.995, top=0.98, bottom=0.08)
     fig.savefig(out, format="svg")
     plt.close(fig)
     return height_in / width_in

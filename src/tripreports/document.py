@@ -6,10 +6,11 @@ the report (sections, tables, wording, number formats) is made here and is unit-
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 from dataclasses import dataclass, field
 
-from .analysis import Analysis
+from .analysis import Analysis, resting
 from .i18n import Locale
 from .schema import Trip, resolve
 from .theme import text_width_mm
@@ -21,7 +22,7 @@ def rich(text: str) -> list[list[dict]]:
     """Parse 'blank line = paragraph, **bold**, *italic*' into paragraphs of runs."""
     paras = []
     for chunk in re.split(r"\n\s*\n", text.strip()):
-        chunk = " ".join(chunk.split())
+        chunk = re.sub(r"[ \t\r\n]+", " ", chunk).strip()   # keeps non-breaking spaces (str.split would not)
         runs = []
         for part in _TOKEN.split(chunk):
             if not part:
@@ -54,6 +55,8 @@ class Assets:
     acc_delta_m: float = 0.0
     photos: list[tuple[str, tuple[int, int]]] = field(default_factory=list)
     groups: list[GroupFigures] = field(default_factory=list)   # one map and profile per figure group
+    alt_chart: str | None = None        # expedition altitude chart (trips with a base camp)
+    alt_chart_ratio: float = 0.0
 
 
 @dataclass
@@ -161,10 +164,13 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         rows.append([ui("class"), L(trip.kind)])
     rows.append([ui("region"), ", ".join(x for x in (L(trip.country), L(trip.region)) if x)])
     if trip.peaks:
-        rows.append([ui("peaks"), "\n".join(f"{p.name} ({loc.metres(p.elevation_m)})" for p in trip.peaks)])
+        rows.append([ui("peaks"), "\n".join(
+            f"{p.name} ({loc.metres(p.elevation_m)})"
+            + (", " + ui("former_name").format(name=p.former_name) if p.former_name else "")
+            for p in trip.peaks)])
     people = []
     for person in trip.participants:
-        lines = [person.name]
+        lines = [f"{person.name} ({L(person.note)})" if person.note else person.name]
         if person.experience:
             lines.append(", ".join(person.experience))
         if person.contact:
@@ -223,9 +229,32 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     if trip.conditions:
         h2(ui("conditions"))
         blocks.append({"type": "paras", "paras": rich(L(trip.conditions))})
-    if trip.accommodation or trip.support:
+    if trip.accommodation or trip.support or trip.accommodation_intro or trip.camps:
         h2(ui("accommodation"))
-        if trip.accommodation:
+        if trip.accommodation_intro:
+            blocks.append({"type": "paras", "paras": rich(L(trip.accommodation_intro))})
+        groups: list[str | None] = []
+        for camp in trip.camps:                      # one table per mountain, in the order given
+            if camp.group not in groups:
+                groups.append(camp.group)
+        has_pos = any(cp.lat is not None for cp in trip.camps)
+        for group in groups:                         # a subsection per mountain, its name not repeated in the table
+            if group:
+                blocks.append({"type": "h3", "text": group})
+            cols = [{"header": ui("camp"), "align": "left", "width": 0.75},
+                    {"header": ui("altitude"), "align": "right", "width": 0.85}]
+            if has_pos:     # dot decimals in every language, so they paste straight into a map
+                cols.append({"header": ui("coordinates"), "align": "left", "width": 1.85})
+            cols.append({"header": ui("notes"), "align": "left", "width": 3.9 if has_pos else 4.6})
+            crows = []
+            for cp in (cp for cp in trip.camps if cp.group == group):
+                row = [cp.name, loc.metres(cp.altitude_m) if cp.altitude_m else ""]
+                if has_pos:
+                    row.append(f"{cp.lat:.6f}, {cp.lon:.6f}" if cp.lat is not None and cp.lon is not None else "")
+                crows.append(row + [L(cp.note)])
+            blocks.append(_table(cols, crows, key_first=True))
+        # with a base camp the nights are a column of the daily table instead
+        if trip.accommodation and not trip.base_camp:
             cols = [{"header": ui("night"), "align": "left", "width": 1.3},
                     {"header": ui("place"), "align": "left", "width": 2.2},
                     {"header": ui("type"), "align": "left", "width": 1.2},
@@ -234,7 +263,12 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             if has_note:
                 cols.insert(3, {"header": ui("notes"), "align": "left", "width": 2.4})
             arows = []
+            group = None
             for a in sorted(trip.accommodation, key=lambda a: a.date):
+                if a.group and a.group != group:    # a heading row whenever the group changes
+                    arows.append([{"group": True, "span": len(cols), "text": a.group, "badge": None,
+                                   "note": ""}])
+                group = a.group
                 row = [loc.short_date(a.date), a.place, L(a.kind)]
                 if has_note:
                     row.append(L(a.note))
@@ -258,17 +292,59 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 for p in sorted(timed, key=lambda p: p.time)]
         blocks.append(_table(cols, rows, key_first=True))
     h2(ui("daily"))
-    cols = [{"header": ui("date"), "align": "left", "width": 1.5}] + [
-        {"header": ui(k), "align": "right", "width": w} for k, w in
-        (("duration", 0.9), ("distance", 1.0), ("ascent", 1.1), ("descent", 1.3),
-         ("min_alt", 1.4), ("max_alt", 1.4))]
-    rows = [[loc.short_date(d.date), loc.duration(d.duration), loc.km(d.distance_m),
-             loc.gain(d.ascent_m), loc.gain(-d.descent_m), loc.metres(d.min_alt_m),
-             loc.metres(d.max_alt_m)] for d in an.days]
-    total = [ui("total"), loc.duration(t["net_time"]), loc.km(t["distance_m"]), loc.gain(t["ascent_m"]),
-             loc.gain(-t["descent_m"]), loc.metres(t["min_alt_m"]), loc.metres(t["max_alt_m"])]
+    bc = trip.base_camp
+    if bc:
+        stay = loc.fig("daily_intro").format(
+            days=loc.days(n_days), range=loc.date_range(trip.start_date, trip.end_date),
+            bc_days=loc.days((bc.departure - bc.arrival).days + 1), bc_range=loc.date_range(bc.arrival, bc.departure))
+        blocks.append({"type": "paras", "paras": rich(stay)})
+    widths = ((("duration", 0.9), ("distance", 1.1), ("ascent", 1.1), ("descent", 1.3), ("min_alt", 1.35),
+               ("max_alt", 1.4)) if bc else
+              (("duration", 0.9), ("distance", 1.0), ("ascent", 1.1), ("descent", 1.3), ("min_alt", 1.4),
+               ("max_alt", 1.4)))
+    cols = [{"header": ui("date"), "align": "left", "width": 1.25 if bc else 1.5}] + (
+        [{"header": ui("acc_sleep"), "align": "left", "width": 1.1}] if bc else []) + [
+        {"header": ui(k), "align": "right", "width": w} for k, w in widths]
+    slept = {a.date: a.place for a in trip.accommodation}
+
+    def night(date):    # where the night after ``date`` was spent, during a base camp stay
+        return slept.get(date, ui("bc_short")) if bc and bc.arrival <= date < bc.departure else ""
+
+    tracked = {d.date: [loc.short_date(d.date)] + ([night(d.date)] if bc else []) + [
+                   loc.duration(d.duration), loc.km(d.distance_m), loc.gain(d.ascent_m), loc.gain(-d.descent_m),
+                   loc.metres(d.min_alt_m), loc.metres(d.max_alt_m)] for d in an.days}
+    rows = list(tracked.values())
+    if bc:     # every day of the stay; one without a track is greyed out with what it was
+        rows = []
+        date = min([bc.arrival, *tracked])
+        while date <= max([bc.departure, *tracked]):
+            if date in tracked:
+                rows.append(tracked[date])
+            elif bc.arrival <= date <= bc.departure:
+                if date == bc.departure:
+                    what = ui("bc_departure")
+                elif date == bc.arrival:
+                    what = ui("bc_arrival")
+                else:
+                    what = ui("rest_day") if resting(trip, date) else ui("no_track")
+                rows.append([{"text": loc.short_date(date), "muted": True}, {"text": night(date), "muted": True},
+                             {"text": what, "muted": True, "span": len(cols) - 2}])
+            date += dt.timedelta(days=1)
+    total = [ui("total")] + ([""] if bc else []) + [
+        loc.duration(t["net_time"]), loc.km(t["distance_m"]), loc.gain(t["ascent_m"]),
+        loc.gain(-t["descent_m"]), loc.metres(t["min_alt_m"]), loc.metres(t["max_alt_m"])]
     rows.append([{"text": v, "bold": True} for v in total])
     blocks.append(_table(cols, rows, key_first=True, total_row=True))
+    if assets.alt_chart and an.expedition:     # the whole stay at a glance, right after its table
+        above = [d.night_m for d in an.expedition if d.night_m is not None and d.night_m > bc.altitude_m]
+        blocks.append({
+            "type": "figure",
+            "headline": loc.fig("alt_title").format(nights=loc.plural(len(above), "nights"),
+                                                    highest=loc.metres(max(above, default=bc.altitude_m))),
+            "subtitle": loc.fig("alt_subtitle"),
+            "image": assets.alt_chart, "ratio": assets.alt_chart_ratio,
+            "source": "", "caption": "",
+        })
 
     # ---- progress --------------------------------------------------------------------------
     if trip.days or trip.acclimatisation:
