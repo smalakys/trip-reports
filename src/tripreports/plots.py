@@ -116,20 +116,21 @@ def _alt_ticks(lo: float, hi: float, step: float = 500.0) -> list[float]:
 # Label placement for the profile: flags beside vertical leaders
 # --------------------------------------------------------------------------------------------
 
-def _flag_slot(items: list[tuple[float, float, float, int]], xc: float, w: float,
-               left_limit: float) -> tuple[int, str]:
-    """Choose a row and side for a label hanging beside a vertical leader at pixel ``xc``.
+def _flag_layout(labels: list[tuple[float, float]], left_limit: float) -> list[tuple[int, str]]:
+    """Choose a row and side for each label hanging beside a vertical leader.
 
-    ``items`` holds the already placed labels as (x0, x1, leader x, row). Labels in one row must
-    not overlap and leaders must not cross labels; if no clean spot exists, only overlaps within
-    a row are avoided. Returns (row, side) with side "right" (label left of leader) or "left".
+    ``labels`` holds (leader x, label width) in pixels, in drawing order. Labels in one row must
+    not overlap and leaders must not cross labels. Earlier labels are moved to other rows or
+    sides when that is what lets a later one be placed cleanly; if no clean layout exists, only
+    overlaps within a row are avoided. Returns (row, side) per label, side "right" (label left
+    of its leader) or "left".
     """
 
-    def box(side: str) -> tuple[float, float]:
+    def box(xc: float, w: float, side: str) -> tuple[float, float]:
         return (xc - w - 3, xc + 3) if side == "right" else (xc - 3, xc + w + 3)
 
-    def clashes(row: int, side: str, strict: bool) -> bool:
-        x0, x1 = box(side)
+    def clashes(items: list, xc: float, w: float, row: int, side: str, strict: bool) -> bool:
+        x0, x1 = box(xc, w, side)
         for ox0, ox1, oxc, orow in items:
             if orow == row and not (x1 < ox0 or x0 > ox1):
                 return True
@@ -139,12 +140,40 @@ def _flag_slot(items: list[tuple[float, float, float, int]], xc: float, w: float
                 return True
         return False
 
-    sides = ["right", "left"] if xc - w - 3 > left_limit else ["left", "right"]
-    for row in range(6):
-        for side in sides:
-            if not clashes(row, side, True):
-                return row, side
-    return next(r for r in range(64) if not clashes(r, sides[0], False)), sides[0]
+    def options(xc: float, w: float) -> list[tuple[int, str]]:
+        sides = ["right", "left"] if xc - w - 3 > left_limit else ["left", "right"]
+        return [(row, side) for row in range(6) for side in sides]
+
+    budget = [5000]   # search steps; a handful of summits never comes close
+
+    def search(i: int, items: list) -> list[tuple[int, str]] | None:
+        if i == len(labels):
+            return []
+        xc, w = labels[i]
+        for row, side in options(xc, w):
+            budget[0] -= 1
+            if budget[0] < 0:
+                return None
+            if clashes(items, xc, w, row, side, True):
+                continue
+            rest = search(i + 1, [*items, (*box(xc, w, side), xc, row)])
+            if rest is not None:
+                return [(row, side), *rest]
+        return None
+
+    clean = search(0, [])
+    if clean is not None:
+        return clean
+    out, items = [], []
+    for xc, w in labels:   # no clean layout: greedy, rows only kept apart
+        sides = options(xc, w)[:2]
+        choice = next(((r, s) for r, s in sides if not clashes(items, xc, w, r, s, True)), None)
+        if choice is None:
+            side = sides[0][1]
+            choice = (next(r for r in range(64) if not clashes(items, xc, w, r, side, False)), side)
+        out.append(choice)
+        items.append((*box(xc, w, choice[1]), xc, choice[0]))
+    return out
 
 
 # --------------------------------------------------------------------------------------------
@@ -205,16 +234,12 @@ def elevation_profile(
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
 
-    items: list[tuple[float, float, float, int]] = []
-    placed = []
-    for p, x, name, num in labels:
-        w = max(name.get_window_extent(renderer).width, num.get_window_extent(renderer).width)
-        xc = ax.transData.transform((x, 0))[0]
-        row, side = _flag_slot(items, xc, w, ax.bbox.x0)
-        x0, x1 = (xc - w - 3, xc + 3) if side == "right" else (xc - 3, xc + w + 3)
-        items.append((x0, x1, xc, row))
-        placed.append((p, x, name, num, row, side))
-    n_rows = max((r for *_, r in items), default=0) + 1
+    geometry = [(ax.transData.transform((x, 0))[0],
+                 max(name.get_window_extent(renderer).width, num.get_window_extent(renderer).width))
+                for _, x, name, num in labels]
+    slots = _flag_layout(geometry, ax.bbox.x0)
+    placed = [(*lab, row, side) for lab, (row, side) in zip(labels, slots, strict=True)]
+    n_rows = max((row for row, _ in slots), default=0) + 1
     row_h, gap = 28.0, 14.0                      # points: height of one label row, dot-to-label gap
     head_pts = gap + n_rows * row_h + 4          # headroom needed above the highest data point
     axes_pts = ax.bbox.height * 72 / fig.dpi
@@ -349,6 +374,9 @@ def _nice_step(span_m: float) -> float:
     return 10 * mag
 
 
+MAP_RATIO = 0.62  # height/width; the map shares its page with the elevation profile, so it cannot be taller
+
+
 @dataclass
 class MapView:
     """What the route map shows: decimated track in web mercator and the visible window."""
@@ -378,7 +406,7 @@ def map_view(track: Track) -> MapView:
     pad = 0.12
     xmin, xmax, ymin, ymax = x.min(), x.max(), y.min(), y.max()
     dx, dy = max(xmax - xmin, 500), max(ymax - ymin, 500)
-    ratio = min(max(dy / dx, 0.62), 1.1)
+    ratio = MAP_RATIO
     cx_, cy_ = (xmin + xmax) / 2, (ymin + ymax) / 2
     half_w = dx * (0.5 + pad)
     half_h = max(dy * (0.5 + pad), half_w * ratio)
@@ -467,6 +495,19 @@ def route_map(
                            ha=ha, va=va, fontproperties=fonts.sans, color=c["ink"], zorder=9,
                            path_effects=_halo(c["surface-100"]))
 
+    dots = {}
+    for p in peaks:   # keep every summit dot clear of the other summits' labels
+        if p.lat is not None and p.lon is not None:
+            px, py = ax.transData.transform(_merc(p.lat, p.lon))
+            dots[p.name] = (px, py)
+            occupied.append((px - 4, py - 4, px + 4, py + 4))
+    clear_px = 8 * fig.dpi / 72   # wanted gap between a label and another summit's dot
+
+    def clearance(name: str, box: tuple) -> float:
+        gaps = [math.hypot(max(box[0] - x, 0, x - box[2]), max(box[1] - y, 0, y - box[3]))
+                for n, (x, y) in dots.items() if n != name]
+        return min(gaps, default=math.inf)
+
     for p in peaks:
         if p.lat is None or p.lon is None:
             continue
@@ -475,25 +516,29 @@ def route_map(
                 mew=2 * PX, zorder=6)
         if not label_peaks:
             continue
-        best = None
-        for ox, oy, ha, va in candidates:
-            txt = put(p, ox, oy, ha, va)
+        # the first free spot well clear of the other summits, else the free spot farthest from them
+        best, best_gap = None, -1.0
+        for spot in candidates:
+            txt = put(p, *spot)
             fig.canvas.draw()
             bb = txt.get_window_extent(renderer)
+            txt.remove()
             box = (bb.x0, bb.y0, bb.x1, bb.y1)
             hit = any(not (box[2] < o[0] or box[0] > o[2] or box[3] < o[1] or box[1] > o[3])
                       for o in occupied)
             inside = (ax.bbox.x0 <= box[0] and box[2] <= ax.bbox.x1 and
                       ax.bbox.y0 <= box[1] and box[3] <= ax.bbox.y1)
-            if not hit and inside:
-                best = box
+            if hit or not inside:
+                continue
+            gap = clearance(p.name, box)
+            if gap > best_gap:
+                best, best_gap = spot, gap
+            if gap >= clear_px:
                 break
-            txt.remove()
-        if best is None:  # no free spot: fall back to the first candidate
-            txt = put(p, *candidates[0])
-            fig.canvas.draw()
-            bb = txt.get_window_extent(renderer)
-            best = (bb.x0, bb.y0, bb.x1, bb.y1)
+        txt = put(p, *(best or candidates[0]))   # no free spot: fall back to the first candidate
+        fig.canvas.draw()
+        bb = txt.get_window_extent(renderer)
+        best = (bb.x0, bb.y0, bb.x1, bb.y1)
         occupied.append(best)
 
     bar_true = _nice_step(2 * half_w / k) / 2

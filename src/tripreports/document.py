@@ -272,12 +272,12 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
 
     # ---- figures ---------------------------------------------------------------------------
     h1(ui("figures"), newpage=True)
-    days_txt = loc.days(n_days)
+    days_txt = loc.fig("single_day") if n_days == 1 else loc.days(n_days)
     source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
     blocks.append({
         "type": "figure",
         "headline": loc.fig("route_title").format(distance=loc.km(t["distance_m"], 0), days=days_txt),
-        "subtitle": loc.fig("route_subtitle"),
+        "subtitle": loc.fig("route_subtitle_single" if n_days == 1 else "route_subtitle"),
         "image": assets.route_map, "under": assets.route_map_under, "ratio": assets.route_map_ratio,
         "source": source_map, "caption": "",
     })
