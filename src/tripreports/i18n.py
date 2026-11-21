@@ -66,12 +66,16 @@ class Locale:
         return f"{round(td.total_seconds() / 3600)}{NBSP}{self.ui('hours_short')}"
 
     # ---- plurals -------------------------------------------------------------------------
-    def days(self, n: int) -> str:
+    def plural(self, n: int, word: str) -> str:
+        """``n`` with the right form of ``word`` (figure keys ``<word>_one``, ``_many``, ``_many_gen``)."""
         f = self.data["figure"]
         if self.code == "lt":
             if n % 10 == 1 and n % 100 != 11:
-                return f["days_one"].format(n=n)
+                return f[f"{word}_one"].format(n=n)
             if n % 10 != 0 and not 11 <= n % 100 <= 19:
-                return f["days_many"].format(n=n)
-            return f["days_many_gen"].format(n=n)
-        return (f["days_one"] if n == 1 else f["days_many"]).format(n=n)
+                return f[f"{word}_many"].format(n=n)
+            return f[f"{word}_many_gen"].format(n=n)
+        return (f[f"{word}_one"] if n == 1 else f[f"{word}_many"]).format(n=n)
+
+    def days(self, n: int) -> str:
+        return self.plural(n, "days")

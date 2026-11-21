@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import plots
 from .analysis import Analysis, acclimatisation_points, analyse
-from .document import Assets, build_document
+from .document import Assets, GroupFigures, build_document
 from .i18n import Locale
 from .images import prepare_image
 from .render import render_pdf
@@ -28,7 +28,7 @@ class BuildResult:
 
 
 def _check_files(trip: Trip, trip_dir: Path) -> None:
-    missing = [p for p in [trip.gpx, trip.cover.image, *(ph.file for ph in trip.photos)]
+    missing = [p for p in [*(f.file for f in trip.gpx_files()), trip.cover.image, *(ph.file for ph in trip.photos)]
                if not (trip_dir / p).exists()]
     if missing:
         raise FileNotFoundError("files listed in the trip file are missing: " + ", ".join(missing))
@@ -87,25 +87,51 @@ def build_report(
     # analysis and figures
     an = analyse(trip, trip_dir)
     loc = Locale(lang)
-    base_image, map_note = None, None
+    # (track, day starts, rests, peaks, file suffix): one map and profile per GPX file when there are several
+    views = [(g.track, g.day_start_idx, g.rest_spans, g.peaks, f"-{i}") for i, g in enumerate(an.groups, start=1)] \
+        or [(an.track, an.day_start_idx, an.rest_spans, an.peaks, "")]
+    basemap, map_note = None, None
     if trip.map.basemap == "tiles":
         try:
-            from .basemap import crop_and_tone, load_basemap
+            from .basemap import load_basemap
 
-            view = plots.map_view(an.track).extent
-            w, h = view[1] - view[0], view[3] - view[2]
-            wanted = (view[0] - 0.05 * w, view[1] + 0.05 * w, view[2] - 0.05 * h, view[3] + 0.05 * h)
-            bm = load_basemap(trip_dir, wanted, trip.map.tile_source)
-            base_image, map_note = crop_and_tone(bm, view, desaturate=0.55, lighten=0.1), bm.attribution
+            exts = [plots.map_view(v[0]).extent for v in views]
+            x0, x1 = min(e[0] for e in exts), max(e[1] for e in exts)
+            y0, y1 = min(e[2] for e in exts), max(e[3] for e in exts)
+            w, h = x1 - x0, y1 - y0
+            wanted = (x0 - 0.05 * w, x1 + 0.05 * w, y0 - 0.05 * h, y1 + 0.05 * h)
+            basemap = load_basemap(trip_dir, wanted, trip.map.tile_source)
+            map_note = basemap.attribution
         except Exception as exc:  # no network, tiles blocked, missing [tiles] extra ...
             an.warnings.append(f"map tiles unavailable ({exc}); drew the plain map instead")
-    map_ratio = plots.route_map(an.track, an.day_start_idx, an.peaks, theme, loc,
-                                assets_dir / "route-map.svg", color_by=trip.map.color_by,
-                                label_peaks=trip.map.label_peaks, base_image=base_image,
-                                base_out=assets_dir / "route-map-base.jpg")
-    rest_labels = label_rests(trip, an.rest_spans)
-    prof_ratio = plots.elevation_profile(an.track, an.rest_spans, an.peaks, theme, loc,
-                                         assets_dir / "elevation-profile.svg", rest_labels=rest_labels)
+    figures = []
+    for track, day_starts, rest_spans, peaks, sfx in views:
+        base_image = None
+        if basemap is not None:
+            from .basemap import crop_and_tone
+
+            base_image = crop_and_tone(basemap, plots.map_view(track).extent, desaturate=0.55, lighten=0.1)
+        map_ratio = plots.route_map(track, day_starts, peaks, theme, loc, assets_dir / f"route-map{sfx}.svg",
+                                    color_by=trip.map.color_by, label_peaks=trip.map.label_peaks,
+                                    base_image=base_image, base_out=assets_dir / f"route-map-base{sfx}.jpg")
+        prof_ratio = plots.elevation_profile(track, rest_spans, peaks, theme, loc,
+                                             assets_dir / f"elevation-profile{sfx}.svg",
+                                             rest_labels=label_rests(trip, rest_spans),
+                                             # a lower profile leaves room for the group's heading
+                                             height_ratio=0.35 if an.groups else 0.44)
+        figures.append(GroupFigures(
+            route_map=f"assets/route-map{sfx}.svg", route_map_ratio=map_ratio,
+            route_map_under=f"assets/route-map-base{sfx}.jpg" if base_image is not None else None,
+            profile=f"assets/elevation-profile{sfx}.svg", profile_ratio=prof_ratio))
+
+    alt_file, alt_ratio = None, 0.0
+    if an.expedition:
+        index = {d.date: i for i, d in enumerate(an.expedition)}
+        summits = [(p.name, p.elevation_m, index[p.time.date()]) for p in an.peaks
+                   if p.time is not None and p.time.date() in index]
+        alt_file = "assets/altitude-chart.svg"
+        alt_ratio = plots.altitude_chart(an.expedition, summits, trip.base_camp.altitude_m, theme, loc,
+                                         assets_dir / "altitude-chart.svg")
 
     acc_file, acc_ratio, acc_delta = None, 0.0, 0.0
     if trip.acclimatisation_chart and len(an.days) >= 3:
@@ -114,12 +140,13 @@ def build_report(
         acc_file, acc_delta = "assets/climb-high-sleep-low.svg", float(sum(gaps) / len(gaps))
         acc_ratio = plots.acclimatisation_chart(points, summit, theme, loc, assets_dir / "climb-high-sleep-low.svg")
 
+    first = figures[0]
     assets = Assets(cover="assets/cover.jpg", cover_px=cover_px,
-                    route_map="assets/route-map.svg", route_map_ratio=map_ratio,
-                    route_map_under="assets/route-map-base.jpg" if base_image is not None else None,
-                    map_attribution=map_note,
-                    profile="assets/elevation-profile.svg", profile_ratio=prof_ratio,
-                    acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos)
+                    route_map=first.route_map, route_map_ratio=first.route_map_ratio,
+                    route_map_under=first.route_map_under, map_attribution=map_note,
+                    profile=first.profile, profile_ratio=first.profile_ratio,
+                    acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos,
+                    groups=figures if an.groups else [], alt_chart=alt_file, alt_chart_ratio=alt_ratio)
     doc = build_document(trip, an, assets, theme, lang)
     (build_dir / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     render_pdf(doc, out_pdf, build_dir)

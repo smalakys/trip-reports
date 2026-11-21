@@ -31,6 +31,8 @@ folder looks like and what the report looks like; the tests build the same trip.
 tripreport sample reports/sample                    # a fictional trip to try the tool on
 tripreport init reports/my-climb                    # new trip folder with a starter trip.yaml
 tripreport clean-gpx in.gpx reports/my-climb/track.gpx --every 1   # keep position, altitude, time only
+tripreport merge-gpx day1.gpx day2.gpx reports/my-climb/track.gpx --keep reports/my-climb/gpx-days
+                                                    # clean daily files, keep them, join them in time order
 tripreport validate reports/my-climb                # check the file, referenced files and the track
 tripreport build reports/my-climb --lang lt         # PDF in reports/my-climb/out/
 tripreport build reports/my-climb --png /tmp/pages  # also render every page to PNG for a quick look
@@ -77,6 +79,13 @@ Points worth knowing:
 - **Text markup:** blank line = paragraph; `**bold**`, `*italic*`.
 - **Title-page numbers:** `cover_stats` picks the headline numbers (two to five, the first in the accent colour) from `highest_point`, `ascent`, `descent`, `distance`, `peaks`, `days`, `net_time`, `vertical_range`. The default suits a multi-day climb; choose others for other kinds of report.
 - **Profile labels:** nights on the elevation profile are named after the `accommodation` entry for that date; `breaks:` names a long daytime stop (`{date, place}`, e.g. a hut). The optional climb-high-sleep-low chart is switched on with `acclimatisation_chart: true`.
+- **High-altitude expeditions:** give `base_camp: {altitude_m, arrival, departure}`. The daily table then
+  lists every day of the stay with where its night was spent (nights from `accommodation`, every other
+  night at base camp) and greys out days without a track; the separate table of nights is left out.
+  Right after that table comes a chart of the whole stay: each day's lowest-to-highest range as a bar
+  and the nights as a line. `camps` (name, altitude, group, note) describes the camps once, one
+  table per mountain. A day without a track that went higher than its camps can say so with
+  `high_point_m` in its diary entry.
 - **Calibration:** GPS altitude is noisy, so computed ascent is rarely exact. `calibration:` (`distance_km`, `ascent_m`, optional `descent_m`) sets the totals you trust; every day's figures are scaled by the same factor so tables still add up. Day texts can use `{distance}`, `{ascent}`, `{descent}`, `{duration}`, `{hours}`, `{max_alt}`, `{min_alt}` to quote that day's figures.
 - **Grades:** give a route group `grade` (as the guidebook writes it) and `grade_system` (Alpine, UIAA, Cat.); they become badges.
 - **Dates and numbers:** dates are ISO, times 24 h, durations `h:mm`, in every language.
@@ -87,7 +96,13 @@ Points worth knowing:
   `basemap.json` in the trip folder, so later builds are offline; delete them to refetch. The attribution
   line is added automatically.
 - **GPX files:** `tripreport clean-gpx in.gpx out.gpx` keeps only position, altitude and time, so heart
-  rate and other sensor data never reach the repository.
+  rate and other sensor data never reach the repository. A watch that records one file per day:
+  `tripreport merge-gpx day1.gpx day2.gpx ... track.gpx --keep gpx-days` cleans every file, keeps the
+  cleaned daily files in `gpx-days/` and writes the merged track.
+- **Several tracks:** an expedition with more than one climb can list one file per climb,
+  `gpx: [{file: peak-a.gpx, name: Peak A}, {file: peak-b.gpx, name: Peak B}]`. Tables and totals use all
+  of them; each file gets its own route map and elevation profile under its name. Diary days outside
+  every file's dates (travel, rest in base camp) need no track.
 
 ## Changing the look
 

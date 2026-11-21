@@ -60,6 +60,19 @@
           ],
           "default": null,
           "title": "Note"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Groups the nights table, e.g. by peak on an expedition with several climbs.",
+          "title": "Group"
         }
       },
       "required": [
@@ -67,6 +80,33 @@
         "place"
       ],
       "title": "Accommodation",
+      "type": "object"
+    },
+    "BaseCamp": {
+      "additionalProperties": false,
+      "description": "The base camp of a high-altitude expedition. Adds the expedition altitude chart: every day from\narrival to departure with its lowest and highest point and the altitude slept at.",
+      "properties": {
+        "altitude_m": {
+          "title": "Altitude M",
+          "type": "number"
+        },
+        "arrival": {
+          "format": "date",
+          "title": "Arrival",
+          "type": "string"
+        },
+        "departure": {
+          "format": "date",
+          "title": "Departure",
+          "type": "string"
+        }
+      },
+      "required": [
+        "altitude_m",
+        "arrival",
+        "departure"
+      ],
+      "title": "BaseCamp",
       "type": "object"
     },
     "Break": {
@@ -133,6 +173,89 @@
         }
       },
       "title": "Calibration",
+      "type": "object"
+    },
+    "Camp": {
+      "additionalProperties": false,
+      "description": "A camp on the route, described once (the nights themselves are ``accommodation`` entries).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "altitude_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Altitude M"
+        },
+        "lat": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Position, decimal degrees (shown with 6 decimals).",
+          "title": "Lat"
+        },
+        "lon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lon"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The mountain or route it belongs to; one subsection per group.",
+          "title": "Group"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Camp",
       "type": "object"
     },
     "Cover": {
@@ -205,6 +328,19 @@
           ],
           "description": "Diary text. Blank line = new paragraph; **bold**, *italic*.",
           "title": "Text"
+        },
+        "high_point_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Highest point of a day without a track, for the expedition altitude chart (e.g. an acclimatisation walk that was not recorded).",
+          "title": "High Point M"
         }
       },
       "required": [
@@ -262,6 +398,19 @@
         "name": {
           "title": "Name",
           "type": "string"
+        },
+        "former_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Earlier name the peak is also known by.",
+          "title": "Former Name"
         },
         "elevation_m": {
           "title": "Elevation M",
@@ -353,6 +502,25 @@
           ],
           "default": null,
           "title": "Contact"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Short note after the name, e.g. which peaks they climbed.",
+          "title": "Note"
         }
       },
       "required": [
@@ -540,6 +708,47 @@
         "name"
       ],
       "title": "Section",
+      "type": "object"
+    },
+    "TrackFile": {
+      "additionalProperties": false,
+      "description": "One GPX file of a trip with several. Each file gets its own route map and elevation profile,\nunless ``figures`` is false.",
+      "properties": {
+        "file": {
+          "description": "Path relative to the trip folder.",
+          "title": "File",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading above this track's map and profile, e.g. the peak.",
+          "title": "Name"
+        },
+        "figures": {
+          "default": true,
+          "description": "False: the track counts in the tables and totals but gets no map or profile (e.g. acclimatisation walks).",
+          "title": "Figures",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "TrackFile",
       "type": "object"
     }
   },
@@ -765,11 +974,38 @@
       "default": null,
       "title": "Conditions"
     },
+    "accommodation_intro": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Text above the nights table, e.g. how the camps are named and where they are.",
+      "title": "Accommodation Intro"
+    },
     "accommodation": {
       "items": {
         "$ref": "#/$defs/Accommodation"
       },
       "title": "Accommodation",
+      "type": "array"
+    },
+    "camps": {
+      "description": "Camps on the routes, shown as one table per group (mountain) under accommodation.",
+      "items": {
+        "$ref": "#/$defs/Camp"
+      },
+      "title": "Camps",
       "type": "array"
     },
     "breaks": {
@@ -798,6 +1034,18 @@
       "default": null,
       "title": "Support"
     },
+    "base_camp": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BaseCamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "High-altitude expeditions: the base camp. Nights without an accommodation entry between arrival and departure are spent here. The daily table then lists every day of the stay with where its night was spent, instead of a table of nights."
+    },
     "acclimatisation": {
       "anyOf": [
         {
@@ -824,10 +1072,20 @@
       "type": "array"
     },
     "gpx": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/TrackFile"
+          },
+          "type": "array"
+        }
+      ],
       "default": "track.gpx",
-      "description": "Path relative to the trip folder.",
-      "title": "Gpx",
-      "type": "string"
+      "description": "Path relative to the trip folder, or a list of files (for example one per peak of an expedition). The statistics use all of them; each file gets its own map and profile. Diary days outside every file's dates (travel, rest in base camp) have no track.",
+      "title": "Gpx"
     },
     "map": {
       "$ref": "#/$defs/MapSettings"

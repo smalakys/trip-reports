@@ -1,4 +1,4 @@
-"""Command line interface: ``tripreport build|validate|schema|init``."""
+"""Command line interface: ``tripreport build|validate|schema|clean-gpx|merge-gpx|sample|init``."""
 
 from __future__ import annotations
 
@@ -51,30 +51,69 @@ def _cmd_schema(args) -> int:
     return 0
 
 
-def _cmd_clean_gpx(args) -> int:
-    """Rewrite a GPX with only position, altitude and time (no heart rate, cadence or power)."""
+def _clean_tracks(src: Path, every: int) -> list:
+    """The tracks of one GPX file with only position, altitude and time (every Nth point kept)."""
     import gpxpy
     import gpxpy.gpx
 
-    with open(args.src, encoding="utf-8") as fh:
-        src = gpxpy.parse(fh)
-    out = gpxpy.gpx.GPX()
-    out.creator = "tripreports clean-gpx"
-    for trk in src.tracks:
+    with open(src, encoding="utf-8") as fh:
+        gpx = gpxpy.parse(fh)
+    tracks = []
+    for trk in gpx.tracks:
         t = gpxpy.gpx.GPXTrack(name=trk.name)
         for seg in trk.segments:
             ns = gpxpy.gpx.GPXTrackSegment()
             last = len(seg.points) - 1
             for i, p in enumerate(seg.points):
-                if i % args.every == 0 or i == last:
+                if i % every == 0 or i == last:
                     ns.points.append(gpxpy.gpx.GPXTrackPoint(
                         round(p.latitude, 6), round(p.longitude, 6),
                         elevation=None if p.elevation is None else round(p.elevation, 1), time=p.time))
             t.segments.append(ns)
-        out.tracks.append(t)
-    Path(args.dest).write_text(out.to_xml(), encoding="utf-8")
-    n = sum(len(s.points) for t in out.tracks for s in t.segments)
-    print(f"wrote {args.dest}: {n} points (kept every {args.every}th; removed sensor data)")
+        tracks.append(t)
+    return tracks
+
+
+def _write_gpx(tracks: list, dest: str | Path, note: str) -> None:
+    import gpxpy.gpx
+
+    out = gpxpy.gpx.GPX()
+    out.creator = "tripreports clean-gpx"
+    out.tracks = tracks
+    Path(dest).parent.mkdir(parents=True, exist_ok=True)
+    Path(dest).write_text(out.to_xml(), encoding="utf-8")
+    n = sum(len(s.points) for t in tracks for s in t.segments)
+    print(f"wrote {dest}: {n} points ({note}; removed sensor data)")
+
+
+def _cmd_clean_gpx(args) -> int:
+    """Rewrite a GPX with only position, altitude and time (no heart rate, cadence or power)."""
+    _write_gpx(_clean_tracks(Path(args.src), args.every), args.dest, f"kept every {args.every}th")
+    return 0
+
+
+def _first_time(track):
+    times = [p.time for s in track.segments for p in s.points if p.time is not None]
+    return min(times) if times else None
+
+
+def _cmd_merge_gpx(args) -> int:
+    """Clean several GPX files (one per day, say) and join them into one track file in time order.
+
+    With ``--keep DIR`` the cleaned single files are written there too, under their own names, so
+    the trip folder keeps the daily originals (without sensor data) next to the merged track.
+    """
+    import datetime as dt
+
+    tracks = []
+    for src in map(Path, args.src):
+        cleaned = _clean_tracks(src, args.every)
+        if args.keep:
+            _write_gpx(cleaned, Path(args.keep) / src.name, "kept original")
+        tracks += cleaned
+    far = dt.datetime.max.replace(tzinfo=dt.UTC)
+    tracks.sort(key=lambda t: _first_time(t) or far)
+    _write_gpx(tracks, args.dest, f"{len(args.src)} files merged in time order")
     return 0
 
 
@@ -147,6 +186,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("dest")
     g.add_argument("--every", type=int, default=3, help="keep every Nth point (default 3)")
     g.set_defaults(fn=_cmd_clean_gpx)
+
+    mg = sub.add_parser("merge-gpx", help="clean several GPX files (e.g. one per day) and join them in time order")
+    mg.add_argument("src", nargs="+", help="input GPX files")
+    mg.add_argument("dest", help="merged GPX to write")
+    mg.add_argument("--every", type=int, default=1, help="keep every Nth point (default 1: all)")
+    mg.add_argument("--keep", metavar="DIR", help="also write each cleaned input file to DIR")
+    mg.set_defaults(fn=_cmd_merge_gpx)
 
     sm = sub.add_parser("sample", help="write a small fictional sample trip to try the tool")
     sm.add_argument("dest")

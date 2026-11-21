@@ -32,10 +32,12 @@ class Person(_Model):
         default_factory=list, description="Notable previous ascents, one per entry."
     )
     contact: str | None = None
+    note: LText | None = Field(None, description="Short note after the name, e.g. which peaks they climbed.")
 
 
 class Peak(_Model):
     name: str
+    former_name: str | None = Field(None, description="Earlier name the peak is also known by.")
     elevation_m: float
     lat: float | None = Field(None, description="Used to find the summit time in the GPX track.")
     lon: float | None = None
@@ -71,6 +73,19 @@ class Accommodation(_Model):
     kind: LText | None = Field(None, description="Hut, bivouac, tent, ...")
     altitude_m: float | None = None
     note: LText | None = None
+    group: str | None = Field(
+        None, description="Groups the nights table, e.g. by peak on an expedition with several climbs.")
+
+
+class Camp(_Model):
+    """A camp on the route, described once (the nights themselves are ``accommodation`` entries)."""
+
+    name: str
+    altitude_m: float | None = None
+    lat: float | None = Field(None, description="Position, decimal degrees (shown with 6 decimals).")
+    lon: float | None = None
+    group: str | None = Field(None, description="The mountain or route it belongs to; one subsection per group.")
+    note: LText | None = None
 
 
 class Break(_Model):
@@ -84,6 +99,35 @@ class Day(_Model):
     date: dt.date
     title: LText
     text: LText = Field(description="Diary text. Blank line = new paragraph; **bold**, *italic*.")
+    high_point_m: float | None = Field(
+        None, description="Highest point of a day without a track, for the expedition altitude chart "
+                          "(e.g. an acclimatisation walk that was not recorded).")
+
+
+class BaseCamp(_Model):
+    """The base camp of a high-altitude expedition. Adds the expedition altitude chart: every day from
+    arrival to departure with its lowest and highest point and the altitude slept at."""
+
+    altitude_m: float
+    arrival: dt.date
+    departure: dt.date
+
+    @model_validator(mode="after")
+    def _check(self) -> BaseCamp:
+        if self.departure < self.arrival:
+            raise ValueError("base_camp: departure is before arrival")
+        return self
+
+
+class TrackFile(_Model):
+    """One GPX file of a trip with several. Each file gets its own route map and elevation profile,
+    unless ``figures`` is false."""
+
+    file: str = Field(description="Path relative to the trip folder.")
+    name: LText | None = Field(None, description="Heading above this track's map and profile, e.g. the peak.")
+    figures: bool = Field(
+        True, description="False: the track counts in the tables and totals but gets no map or profile "
+                          "(e.g. acclimatisation walks).")
 
 
 class Photo(_Model):
@@ -155,15 +199,29 @@ class Trip(_Model):
     tactics: LText | None = None
     gear: list[LText] = Field(default_factory=list)
     conditions: LText | None = None
+    accommodation_intro: LText | None = Field(
+        None, description="Text above the nights table, e.g. how the camps are named and where they are.")
     accommodation: list[Accommodation] = Field(default_factory=list)
+    camps: list[Camp] = Field(
+        default_factory=list,
+        description="Camps on the routes, shown as one table per group (mountain) under accommodation.")
     breaks: list[Break] = Field(
         default_factory=list,
         description="Named daytime stops (1 to 5 hours) shown on the elevation profile.",
     )
     support: LText | None = None
+    base_camp: BaseCamp | None = Field(
+        None, description="High-altitude expeditions: the base camp. Nights without an accommodation "
+                          "entry between arrival and departure are spent here. The daily table then lists "
+                          "every day of the stay with where its night was spent, instead of a table of nights.")
     acclimatisation: LText | None = None
     days: list[Day] = Field(default_factory=list)
-    gpx: str = Field("track.gpx", description="Path relative to the trip folder.")
+    gpx: str | list[TrackFile] = Field(
+        "track.gpx",
+        description="Path relative to the trip folder, or a list of files (for example one per peak of an "
+                    "expedition). The statistics use all of them; each file gets its own map and profile. "
+                    "Diary days outside every file's dates (travel, rest in base camp) have no track.",
+    )
     map: MapSettings = Field(default_factory=MapSettings)
     photos: list[Photo] = Field(default_factory=list)
     references: list[str] = Field(default_factory=list)
@@ -178,8 +236,13 @@ class Trip(_Model):
     )
     show_contents: bool = True
 
+    def gpx_files(self) -> list[TrackFile]:
+        return [TrackFile(file=self.gpx)] if isinstance(self.gpx, str) else list(self.gpx)
+
     @model_validator(mode="after")
     def _check(self) -> Trip:
+        if isinstance(self.gpx, list) and not self.gpx:
+            raise ValueError("gpx: give at least one file")
         if self.end_date < self.start_date:
             raise ValueError("end_date is before start_date")
         for p in self.peaks:

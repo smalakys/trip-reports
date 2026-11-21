@@ -1,6 +1,7 @@
 """End-to-end checks on the generated sample trip. If these pass, the repository works."""
 
 import datetime as dt
+import json
 
 import pytest
 from pypdf import PdfReader
@@ -146,3 +147,157 @@ def test_clean_gpx_removes_sensor_data(tmp_path):
     text = out.read_text(encoding="utf-8")
     assert "hr" not in text and "gpxtpx" not in text
     assert text.count("<trkpt") == 6      # every 2nd point of 10, plus the last
+
+
+def _gpx(day: int, hr: bool = True) -> str:
+    ext = ("<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>90</gpxtpx:hr></gpxtpx:TrackPointExtension>"
+           "</extensions>") if hr else ""
+    return ('<?xml version="1.0"?><gpx version="1.1" creator="x" xmlns="http://www.topografix.com/GPX/1/1" '
+            'xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><trkseg>'
+            + "".join(f'<trkpt lat="46.{i:03d}" lon="8.{i:03d}"><ele>{1000 + i}</ele>'
+                      f"<time>2025-08-{day:02d}T07:{i:02d}:00Z</time>{ext}</trkpt>" for i in range(5))
+            + "</trkseg></trk></gpx>")
+
+
+def test_merge_gpx_cleans_and_orders_daily_files(tmp_path):
+    from tripreports.cli import main
+    from tripreports.gpxstats import load_gpx
+
+    for day in (12, 10, 11):      # given out of order on purpose
+        (tmp_path / f"day{day}.gpx").write_text(_gpx(day), encoding="utf-8")
+    out, keep = tmp_path / "merged.gpx", tmp_path / "days"
+    srcs = [str(tmp_path / f"day{d}.gpx") for d in (12, 10, 11)]
+    assert main(["merge-gpx", *srcs, str(out), "--keep", str(keep)]) == 0
+    text = out.read_text(encoding="utf-8")
+    assert "hr" not in text and text.count("<trkpt") == 15
+    assert text.index("2025-08-10") < text.index("2025-08-11") < text.index("2025-08-12")
+    assert sorted(p.name for p in keep.iterdir()) == ["day10.gpx", "day11.gpx", "day12.gpx"]
+    assert "hr" not in (keep / "day10.gpx").read_text(encoding="utf-8")
+    assert len(load_gpx(out, "Europe/Zurich")) == 15
+
+
+def test_several_track_files_get_a_map_and_profile_each(trip_copy):
+    import shutil
+
+    import gpxpy
+    import gpxpy.gpx
+
+    from tripreports.build import build_report
+    from tripreports.gpxstats import load_gpx
+
+    # split the sample track into two files at the start of its fourth day
+    gpx = gpxpy.parse((trip_copy / "track.gpx").read_text(encoding="utf-8"))
+    pts = [p for t in gpx.tracks for s in t.segments for p in s.points]
+    track = load_gpx(trip_copy / "track.gpx", "Europe/Zurich")
+    cut = next(i for i, t in enumerate(track.t) if t.date() >= dt.date(2025, 8, 13))
+    for name, part in (("a.gpx", pts[:cut]), ("b.gpx", pts[cut:])):
+        g = gpxpy.gpx.GPX()
+        trk = gpxpy.gpx.GPXTrack()
+        seg = gpxpy.gpx.GPXTrackSegment()
+        seg.points = part
+        trk.segments.append(seg)
+        g.tracks.append(trk)
+        (trip_copy / name).write_text(g.to_xml(), encoding="utf-8")
+    (trip_copy / "track.gpx").unlink()
+    edit_trip(trip_copy, gpx=[{"file": "a.gpx", "name": "Pirmoji dalis"}, {"file": "b.gpx", "name": "Antroji dalis"}])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert res.warnings == []
+    assert len(res.analysis.groups) == 2 and len(res.analysis.days) == 5
+    assert [len(g.day_start_idx) for g in res.analysis.groups] == [3, 2]
+    assets = sorted(p.name for p in (res.build_dir / "assets").glob("*.svg"))
+    assert "route-map-1.svg" in assets and "elevation-profile-2.svg" in assets
+    text = _text(res.pdf)
+    assert "Pirmoji dalis" in text and "Antroji dalis" in text
+    shutil.rmtree(res.build_dir)
+
+    # a file marked figures: false still counts in the tables, but gets no map or profile
+    edit_trip(trip_copy, gpx=[{"file": "a.gpx", "name": "Pirmoji dalis", "figures": False},
+                              {"file": "b.gpx", "name": "Antroji dalis"}])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert res.warnings == []
+    assert len(res.analysis.days) == 5 and [len(g.day_start_idx) for g in res.analysis.groups] == [2]
+    assert not (res.build_dir / "assets" / "route-map-2.svg").exists()
+
+
+def test_nights_table_is_grouped_with_an_intro(trip_copy):
+    import yaml
+
+    from tripreports.build import build_report
+
+    data = yaml.safe_load((trip_copy / "trip.yaml").read_text(encoding="utf-8"))
+    nights = data["accommodation"]
+    for i, night in enumerate(nights):
+        night["group"] = "Pirmoji grupė" if i < 2 else "Antroji grupė"
+    edit_trip(trip_copy, accommodation=nights, accommodation_intro="Stovyklų žymėjimas paaiškintas čia.")
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+    table = next(b for b in doc["blocks"] if b["type"] == "table" and b["columns"][0]["header"] == "Naktis")
+    groups = [r[0]["text"] for r in table["rows"] if isinstance(r[0], dict) and r[0].get("group")]
+    assert groups == ["Pirmoji grupė", "Antroji grupė"]
+    assert "Stovyklų žymėjimas paaiškintas čia." in _text(res.pdf)
+
+
+def test_a_base_camp_adds_the_expedition_altitude_chart(built, trip_copy):
+    from tripreports.build import build_report
+
+    assert built["lt"].analysis.expedition == []         # no base camp, no chart
+    edit_trip(trip_copy, base_camp={"altitude_m": 1300, "arrival": "2025-08-10", "departure": "2025-08-14"})
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert res.warnings == []
+    assert len(res.analysis.expedition) == 5
+    assert (res.build_dir / "assets" / "altitude-chart.svg").exists()
+    text = _text(res.pdf)
+    assert "virš bazinės stovyklos" in " ".join(text.split())
+    doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+    kinds = [b["type"] for b in doc["blocks"]]
+    daily = next(i for i, b in enumerate(doc["blocks"]) if b["type"] == "table" and b.get("total_row"))
+    assert kinds[daily + 1] == "figure" and doc["blocks"][daily + 1]["image"] == "assets/altitude-chart.svg"
+
+    # with a base camp the daily table lists every day of the stay; days without a track are greyed out
+    edit_trip(trip_copy, base_camp={"altitude_m": 1300, "arrival": "2025-08-08", "departure": "2025-08-16"})
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+    table = next(b for b in doc["blocks"] if b["type"] == "table" and b.get("total_row"))
+    assert [c["header"] for c in table["columns"][:2]] == ["Data", "Nakvynė"]
+    greyed = [r for r in table["rows"] if isinstance(r[0], dict) and r[0].get("muted")]
+    assert [r[0]["text"] for r in greyed] == ["2025-08-08", "2025-08-09", "2025-08-15", "2025-08-16"]
+    assert [r[1]["text"] for r in greyed] == ["BC", "BC", "BC", ""]          # nothing after departure
+    assert [r[2]["text"] for r in greyed] == ["Atvykimas į bazinę stovyklą", "Poilsio diena", "Poilsio diena",
+                                              "Išvykimas iš bazinės stovyklos"]
+    nights = {r[0]: r[1] for r in table["rows"] if isinstance(r[0], str)}
+    assert nights["2025-08-10"] == "Alfos trobelė"                           # from the accommodation entry
+    assert not any(b["type"] == "table" and b["columns"][0]["header"] == "Naktis" for b in doc["blocks"])
+    assert "truko 9 dienas (2025-08-08 – 2025-08-16)" in " ".join(_text(res.pdf).split())
+
+
+def test_camps_get_one_table_per_mountain(trip_copy):
+    from tripreports.build import build_report
+
+    edit_trip(trip_copy, camps=[
+        {"name": "C1", "altitude_m": 3000, "lat": 46.1, "lon": 7.123456789, "group": "Pirmas kalnas",
+         "note": "Ant ledyno"},
+        {"name": "C2", "altitude_m": 3500, "group": "Pirmas kalnas"},
+        {"name": "C1", "altitude_m": 3200, "group": "Antras kalnas", "note": "Po serakais"}])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+    heads = [b["text"] for b in doc["blocks"] if b["type"] == "h3"]
+    tables = [b for b in doc["blocks"] if b["type"] == "table" and b["columns"][0]["header"] == "Stovykla"]
+    assert heads == ["Pirmas kalnas", "Antras kalnas"]          # a subsection per mountain ...
+    assert [len(t["rows"]) for t in tables] == [2, 1]          # ... and no heading row in its table
+    assert tables[0]["rows"][0][2] == "46.100000, 7.123457"     # dot decimals for any map, 6 places
+    assert "Po serakais" in _text(res.pdf)
+
+
+def test_participant_note_and_former_peak_name(trip_copy):
+    import yaml
+
+    from tripreports.build import build_report
+
+    data = yaml.safe_load((trip_copy / "trip.yaml").read_text(encoding="utf-8"))
+    data["participants"][0]["note"] = "tik Aušros viršūnė"
+    data["peaks"][0]["former_name"] = "Senoji viršūnė"
+    edit_trip(trip_copy, participants=data["participants"], peaks=data["peaks"])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert f"{data['participants'][0]['name']} (tik Aušros viršūnė)" in text
+    assert "anksčiau – Senoji viršūnė" in text
