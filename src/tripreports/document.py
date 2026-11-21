@@ -97,8 +97,10 @@ def fill_day_numbers(text: str, stats, loc: Locale) -> str:
     return _DAY_TOKEN.sub(lambda m: values[m.group(1)], text)
 
 
-def badge(grade: str, system: str | None = None, key: bool = False) -> dict:
-    return {"grade": grade, "system": system or "", "key": key}
+def badge(grade: str, system: str | None = None, key: bool = False, ski: bool = False) -> dict:
+    """A grade pill. ``key``: filled orange (the route's own grade); ``ski``: filled glacier blue (a ski
+    mountaineering grade); neither: outlined."""
+    return {"grade": grade, "system": system or "", "key": key, "ski": ski}
 
 
 def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: str) -> dict:
@@ -161,11 +163,13 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     h1(ui("general"), newpage=True)
     rows = [[ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
     if trip.kind:
-        rows.append([ui("class"), L(trip.kind)])
+        rows.append([ui("class"), L(trip.kind) + (f" ({L(trip.kind_note)})" if trip.kind_note else "")])
     rows.append([ui("region"), ", ".join(x for x in (L(trip.country), L(trip.region)) if x)])
     if trip.peaks:
         rows.append([ui("peaks"), "\n".join(
             f"{p.name} ({loc.metres(p.elevation_m)})"
+            + (f" – {p.grade}" if p.grade else "")
+            + ((", " if p.grade else " – ") + ui("ski_grade_inline").format(grade=p.ski_grade) if p.ski_grade else "")
             + (", " + ui("former_name").format(name=p.former_name) if p.former_name else "")
             for p in trip.peaks)])
     people = []
@@ -203,9 +207,10 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             cols.append({"header": ui("notes"), "align": "left", "width": 2.2})
         trows = []
         for g in trip.routes:
-            if len(trip.routes) > 1 or g.grade or g.note:   # a lone, unadorned route needs no heading row
+            if len(trip.routes) > 1 or g.grade or g.ski_grade or g.note:   # a lone, unadorned route needs no heading row
                 trows.append([{"group": True, "span": len(cols), "text": g.name,
-                               "badge": badge(g.grade, g.grade_system, key=True) if g.grade else None,
+                               "badges": ([badge(g.grade, g.grade_system, key=True)] if g.grade else [])
+                               + ([badge(g.ski_grade, g.ski_grade_system, ski=True)] if g.ski_grade else []),
                                "note": L(g.note)}])
             for s in g.sections:
                 row = [s.name]
@@ -241,11 +246,13 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         for group in groups:                         # a subsection per mountain, its name not repeated in the table
             if group:
                 blocks.append({"type": "h3", "text": group})
-            cols = [{"header": ui("camp"), "align": "left", "width": 0.75},
+            # short codes (C1, C2a) get a narrow column; named places (a hut, a glacier) a wider one
+            name_w = 0.75 if all(len(cp.name) <= 5 for cp in trip.camps) else 1.5
+            cols = [{"header": ui("camp"), "align": "left", "width": name_w},
                     {"header": ui("altitude"), "align": "right", "width": 0.85}]
             if has_pos:     # dot decimals in every language, so they paste straight into a map
                 cols.append({"header": ui("coordinates"), "align": "left", "width": 1.85})
-            cols.append({"header": ui("notes"), "align": "left", "width": 3.9 if has_pos else 4.6})
+            cols.append({"header": ui("notes"), "align": "left", "width": (3.9 if has_pos else 4.6) + 0.75 - name_w})
             crows = []
             for cp in (cp for cp in trip.camps if cp.group == group):
                 row = [cp.name, loc.metres(cp.altitude_m) if cp.altitude_m else ""]
@@ -266,7 +273,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             group = None
             for a in sorted(trip.accommodation, key=lambda a: a.date):
                 if a.group and a.group != group:    # a heading row whenever the group changes
-                    arows.append([{"group": True, "span": len(cols), "text": a.group, "badge": None,
+                    arows.append([{"group": True, "span": len(cols), "text": a.group, "badges": [],
                                    "note": ""}])
                 group = a.group
                 row = [loc.short_date(a.date), a.place, L(a.kind)]
@@ -288,7 +295,27 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 {"header": ui("altitude"), "align": "right", "width": 1.2},
                 {"header": ui("date"), "align": "left", "width": 1.8},
                 {"header": ui("time"), "align": "right", "width": 0.9}]
-        rows = [[p.name, loc.metres(p.elevation_m), loc.short_date(p.time.date()), loc.clock(p.time)]
+        by_name = {p.name: p for p in trip.peaks}
+        has_grade = any(p.grade for p in trip.peaks)
+        has_ski = any(p.ski_grade for p in trip.peaks)
+        if has_ski:
+            cols.insert(1, {"header": ui("ski_grade"), "align": "left", "width": 1.75})
+        if has_grade:
+            cols.insert(1, {"header": ui("grade"), "align": "left", "width": 1.3})
+        if has_grade or has_ski:
+            cols[0]["width"] = 1.9
+
+        def grades(name):
+            p = by_name.get(name)
+            out = []
+            if has_grade:
+                out.append({"badge": badge(p.grade, p.grade_system, key=True)} if p and p.grade else "")
+            if has_ski:
+                out.append({"badge": badge(p.ski_grade, p.ski_grade_system, ski=True)} if p and p.ski_grade else "")
+            return out
+
+        rows = [[p.name] + grades(p.name)
+                + [loc.metres(p.elevation_m), loc.short_date(p.time.date()), loc.clock(p.time)]
                 for p in sorted(timed, key=lambda p: p.time)]
         blocks.append(_table(cols, rows, key_first=True))
     h2(ui("daily"))

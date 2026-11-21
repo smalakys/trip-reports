@@ -77,6 +77,7 @@ class Palette:
     rule: Color          # table and divider rules
     accent: Color        # accent-text: small orange text
     brand: Color
+    ski: Color           # series-2 (glacier blue): ski mountaineering grade badges
     action: Color
     on_action: Color
     page: Color
@@ -92,7 +93,7 @@ def palette(theme: dict) -> Palette:
     h = lambda n: HexColor(c[n][:7])  # noqa: E731 (strip any alpha)
     return Palette(
         ink=h("ink"), muted=h("ink-muted"), line=h("line"), rule=h("ink"), accent=h("accent-text"),
-        brand=h("brand"), action=h("action"), on_action=h("on-action"), page=h("surface-000"),
+        brand=h("brand"), ski=h("series-2"), action=h("action"), on_action=h("on-action"), page=h("surface-000"),
         inverse=h("surface-inverse"), on_inverse=h("ink-inverse"), chart_grid=h("chart-grid"),
         surface_200=h("surface-200"),
         flags=(h("flag-yellow"), h("flag-green"), h("flag-red")),
@@ -177,9 +178,10 @@ class BulletItem(Paragraph):
 class GradeBadge(Flowable):
     """A route's grade as a pill: grading system in small caps, then the grade as written."""
 
-    def __init__(self, grade: str, system: str, key: bool, pal: Palette, on_dark: bool = False):
+    def __init__(self, grade: str, system: str, key: bool, pal: Palette, on_dark: bool = False, ski: bool = False):
         super().__init__()
         self.grade, self.system, self.key, self.pal, self.on_dark = grade, system.upper(), key, pal, on_dark
+        self.ski = ski
         self.h = 14.0
         self.sys_w = pdfmetrics.stringWidth(self.system, SEMI, 5.5) if system else 0
         self.grade_w = pdfmetrics.stringWidth(grade, NUM, 8)
@@ -190,7 +192,9 @@ class GradeBadge(Flowable):
 
     def draw(self):
         c, p = self.canv, self.pal
-        if self.key:
+        if self.ski:
+            fill, stroke, fg, sysc = p.ski, p.ski, p.on_action, p.on_action
+        elif self.key:
             fill, stroke, fg, sysc = p.action, p.action, p.on_action, p.on_action
         else:
             fill = None if self.on_dark else p.page
@@ -531,15 +535,14 @@ class Report(BaseDocTemplate):
                 if is_dict and cell.get("group"):
                     inner = [Paragraph(f"<b>{markup(cell['text'])}</b>", S["cell"])]
                     cells = [inner[0]]
-                    if cell["badge"]:
-                        bd = cell["badge"]
-                        cells.append(GradeBadge(bd["grade"], bd["system"], True, p))
+                    badges = [GradeBadge(bd["grade"], bd["system"], True, p, ski=bd.get("ski", False))
+                              for bd in cell.get("badges", [])]
+                    cells += badges
                     if cell["note"]:
                         cells.append(Paragraph(markup(cell["note"]), S["caption"]))
                     fs = S["cell"].fontSize
                     widths = [pdfmetrics.stringWidth(cell["text"], SEMI, fs) + 12]
-                    if cell["badge"]:
-                        widths.append(cells[1].w + 8)
+                    widths += [gb.w + 8 for gb in badges]
                     if cell["note"]:
                         widths.append(pdfmetrics.stringWidth(cell["note"], BODY, S["caption"].fontSize) + 14)
                     t = Table([cells], colWidths=widths, hAlign="LEFT")
@@ -550,7 +553,7 @@ class Report(BaseDocTemplate):
                     styles += [("SPAN", (ci, r), (ci + span - 1, r)), ("TOPPADDING", (0, r), (-1, r), 10)]
                 elif is_dict and cell.get("badge"):
                     bd = cell["badge"]
-                    out.append(GradeBadge(bd["grade"], bd["system"], bd["key"], p))
+                    out.append(GradeBadge(bd["grade"], bd["system"], bd["key"], p, ski=bd.get("ski", False)))
                 else:
                     txt = cell["text"] if is_dict else cell
                     bold = is_dict and cell.get("bold")

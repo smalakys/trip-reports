@@ -301,3 +301,30 @@ def test_participant_note_and_former_peak_name(trip_copy):
     text = " ".join(_text(res.pdf).split())
     assert f"{data['participants'][0]['name']} (tik Aušros viršūnė)" in text
     assert "anksčiau – Senoji viršūnė" in text
+
+
+def test_peak_grades_in_general_info_and_summit_times(trip_copy):
+    import yaml
+
+    from tripreports.build import build_report
+
+    data = yaml.safe_load((trip_copy / "trip.yaml").read_text(encoding="utf-8"))
+    for peak in data["peaks"]:
+        peak.pop("grade", None)
+        peak.pop("ski_grade", None)
+    data["peaks"][0].update(grade="PD-", grade_system="Alpine", ski_grade="2.3 / E1", ski_grade_system="Toponeige")
+    edit_trip(trip_copy, peaks=data["peaks"])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert f"{data['peaks'][0]['name']} (3 987 m) – PD-, slidėmis 2.3 / E1" in text
+    assert f"{data['peaks'][1]['name']} (4 105 m) –" not in text
+
+
+def test_kind_note_in_general_info_only(trip_copy):
+    from tripreports.build import build_report
+
+    edit_trip(trip_copy, kind="Kalnų žygių klasė", kind_note="nekategorinis žygis slidėmis")
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert "Kalnų žygių klasė (nekategorinis žygis slidėmis)" in text
+    assert text.count("nekategorinis žygis slidėmis") == 1     # not on the title page pill

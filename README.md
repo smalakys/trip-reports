@@ -87,7 +87,11 @@ Points worth knowing:
   table per mountain. A day without a track that went higher than its camps can say so with
   `high_point_m` in its diary entry.
 - **Calibration:** GPS altitude is noisy, so computed ascent is rarely exact. `calibration:` (`distance_km`, `ascent_m`, optional `descent_m`) sets the totals you trust; every day's figures are scaled by the same factor so tables still add up. Day texts can use `{distance}`, `{ascent}`, `{descent}`, `{duration}`, `{hours}`, `{max_alt}`, `{min_alt}` to quote that day's figures.
-- **Grades:** give a route group `grade` (as the guidebook writes it) and `grade_system` (Alpine, UIAA, Cat.); they become badges.
+- **Grades:** give a route group `grade` (as the guidebook writes it) and `grade_system` (Alpine, UIAA, Cat.); they become badges. A peak can carry the grade of the route climbed (`grade`, `grade_system`):
+  it is listed with the peak in the general information and as a badge in the summit times. A ski
+  mountaineering grade (`ski_grade`, `ski_grade_system`, e.g. `2.3 / E1`, Toponeige) is shown beside it.
+- **Class:** `kind` is the title-page pill and the "Klasė" row; `kind_note` adds a remark in parentheses
+  to the row only.
 - **Dates and numbers:** dates are ISO, times 24 h, durations `h:mm`, in every language.
 - **Photos:** `size: full` puts a photo on a page of its own; `half` places two per page.
 - **Map:** `map.basemap: plain` draws a flat grid and works offline. `tiles` puts a real map under the
