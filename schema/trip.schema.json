@@ -467,6 +467,58 @@
           "default": null,
           "description": "Local summit time. Computed from the GPX track when lat/lon are given.",
           "title": "Time"
+        },
+        "grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grade of the route climbed, as the guidebook writes it, e.g. 'PD-'. Shown with the peak in the general information and the summit times.",
+          "title": "Grade"
+        },
+        "grade_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grading system shown on the summit table's badge: Alpine, UIAA, ...",
+          "title": "Grade System"
+        },
+        "ski_grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ski mountaineering grade of the route, as the guidebook writes it, e.g. '2.3 / E1'. Shown beside the climbing grade.",
+          "title": "Ski Grade"
+        },
+        "ski_grade_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ski grading system shown on its badge, e.g. Toponeige.",
+          "title": "Ski Grade System"
         }
       },
       "required": [
@@ -601,6 +653,32 @@
           "default": null,
           "description": "Grading system shown in small caps on the badge: Alpine, UIAA, Cat., ...",
           "title": "Grade System"
+        },
+        "ski_grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ski mountaineering grade, e.g. '2.3 / E1'; a glacier-blue badge after the grade.",
+          "title": "Ski Grade"
+        },
+        "ski_grade_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ski grading system on its badge, e.g. Toponeige.",
+          "title": "Ski Grade System"
         },
         "note": {
           "anyOf": [
@@ -880,6 +958,25 @@
       "default": null,
       "description": "Climb class, e.g. 'Technical'.",
       "title": "Kind"
+    },
+    "kind_note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Shown in parentheses after the class in the general information table only (not on the title page), e.g. 'unclassified ski tour'.",
+      "title": "Kind Note"
     },
     "participants": {
       "items": {

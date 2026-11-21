@@ -209,18 +209,19 @@ timezone: Europe/Zurich
 region: Aušros Alpės (išgalvotas rajonas)
 country: Šveicarija
 kind: Techninė klasė
+kind_note: išgalvotas žygis
 
 participants:
   - name: Jonas Jonaitis
   - name: Rūta Rutaitė
 
 peaks:
-  - {name: Ledo smailė, elevation_m: 3987, lat: 46.53503, lon: 8.07321}
-  - {name: Žaibo kupolas, elevation_m: 4105, lat: 46.53692, lon: 8.08731}
-  - {name: Audros ragas, elevation_m: 4168, lat: 46.54312, lon: 8.09905}
-  - {name: Sidabro kalnas, elevation_m: 4010, lat: 46.55929, lon: 8.06773}
-  - {name: Aušros viršūnė, elevation_m: 4231, lat: 46.56737, lon: 8.07948}
-  - {name: Vėjo dantis, elevation_m: 4087, lat: 46.57734, lon: 8.10688}
+  - {name: Ledo smailė, elevation_m: 3987, lat: 46.53503, lon: 8.07321, grade: PD, grade_system: Alpine, ski_grade: 2.3 / E1, ski_grade_system: Toponeige}
+  - {name: Žaibo kupolas, elevation_m: 4105, lat: 46.53692, lon: 8.08731, grade: PD+, grade_system: Alpine}
+  - {name: Audros ragas, elevation_m: 4168, lat: 46.54312, lon: 8.09905, grade: AD, grade_system: Alpine}
+  - {name: Sidabro kalnas, elevation_m: 4010, lat: 46.55929, lon: 8.06773, grade: AD, grade_system: Alpine}
+  - {name: Aušros viršūnė, elevation_m: 4231, lat: 46.56737, lon: 8.07948, grade: D−, grade_system: Alpine}
+  - {name: Vėjo dantis, elevation_m: 4087, lat: 46.57734, lon: 8.10688, grade: AD, grade_system: Alpine}
 
 route_description: >-
   Penkių dienų žygis per šešias išgalvotas viršūnes, kiekviena aukštesnė nei 3980 m. Pradėta ir
@@ -230,6 +231,8 @@ routes:
   - name: Ledo grandinė
     grade: AD
     grade_system: Alpine
+    ski_grade: 2.3 / E1
+    ski_grade_system: Toponeige
     note: III · 700 m
     sections:
       - {name: Ledo smailė, grade: PD, pitches: "1", leader: Jonas}

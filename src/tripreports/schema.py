@@ -45,6 +45,16 @@ class Peak(_Model):
     time: Time | None = Field(
         None, description="Local summit time. Computed from the GPX track when lat/lon are given."
     )
+    grade: str | None = Field(
+        None, description="Grade of the route climbed, as the guidebook writes it, e.g. 'PD-'. Shown "
+                          "with the peak in the general information and the summit times.")
+    grade_system: str | None = Field(
+        None, description="Grading system shown on the summit table's badge: Alpine, UIAA, ...")
+    ski_grade: str | None = Field(
+        None, description="Ski mountaineering grade of the route, as the guidebook writes it, e.g. '2.3 / E1'. "
+                          "Shown beside the climbing grade.")
+    ski_grade_system: str | None = Field(
+        None, description="Ski grading system shown on its badge, e.g. Toponeige.")
 
 
 class Section(_Model):
@@ -63,6 +73,9 @@ class RouteGroup(_Model):
     grade_system: str | None = Field(
         None, description="Grading system shown in small caps on the badge: Alpine, UIAA, Cat., ..."
     )
+    ski_grade: str | None = Field(
+        None, description="Ski mountaineering grade, e.g. '2.3 / E1'; a glacier-blue badge after the grade.")
+    ski_grade_system: str | None = Field(None, description="Ski grading system on its badge, e.g. Toponeige.")
     note: LText | None = Field(None, description="Extra route facts shown beside the grade, e.g. '700 m'.")
     sections: list[Section] = Field(default_factory=list)
 
@@ -190,6 +203,9 @@ class Trip(_Model):
     region: LText
     country: LText | None = None
     kind: LText | None = Field(None, description="Climb class, e.g. 'Technical'.")
+    kind_note: LText | None = Field(
+        None, description="Shown in parentheses after the class in the general information table only "
+                          "(not on the title page), e.g. 'unclassified ski tour'.")
     participants: list[Person] = Field(default_factory=list)
     peaks: list[Peak] = Field(default_factory=list)
     route_description: LText | None = Field(
