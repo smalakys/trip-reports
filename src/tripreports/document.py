@@ -261,10 +261,15 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         h2(ui("gear"))
         if trip.gear:
             blocks.append({"type": "bullets", "items": [L(g) for g in trip.gear]})
+        # team and personal gear: one paragraph each, a bold run-in label and the items in a sentence
+        gear_paras = []
         for key, items in (("team_gear", trip.team_gear), ("personal_gear", trip.personal_gear)):
             if items:
-                blocks.append({"type": "h3", "text": ui(key)})
-                blocks.append({"type": "bullets", "items": [L(g) for g in items]})
+                listed = ", ".join(L(g).strip().rstrip(".") for g in items) + "."
+                gear_paras.append([{"t": ui(key) + ": ", "b": True, "i": False},
+                                   {"t": listed, "b": False, "i": False}])
+        if gear_paras:
+            blocks.append({"type": "paras", "paras": gear_paras})
     if trip.accommodation or trip.accommodation_intro or trip.camps:
         h2(ui("accommodation"))
         if trip.accommodation_intro:

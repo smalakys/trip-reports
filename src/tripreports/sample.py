@@ -258,8 +258,8 @@ team_gear:
   - 6 × frendai
   - 4 × ledo sraigtai
 personal_gear:
-  - Ledkirtis
-  - Katės
+  - ledkirtis
+  - katės
 conditions: Slėnyje dieną buvo apie 26 °C, 4000 m aukštyje – apie 0–5 °C.
 route_conditions: Keteros sausos, ledynuose – kietas firnas. Stacionarių saugos taškų maršrute nėra.
 support: Nakvojome prižiūrimose trobelėse; gidų ir nešikų paslaugomis nesinaudojome.
