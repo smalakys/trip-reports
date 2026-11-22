@@ -321,6 +321,40 @@ def test_peak_grades_in_general_info_and_summit_times(trip_copy):
     assert f"{data['peaks'][1]['name']} (4 105 m) –" not in text
 
 
+def test_summit_times_name_climbers_only_when_not_everyone_reached_every_summit(trip_copy):
+    import yaml
+
+    import pydantic
+
+    from tripreports.build import build_report
+
+    def summit_table(res):
+        doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+        return next(b for b in doc["blocks"] if b["type"] == "table" and b["columns"][0]["header"] == "Viršūnė")
+
+    data = yaml.safe_load((trip_copy / "trip.yaml").read_text(encoding="utf-8"))
+    team = [p["name"] for p in data["participants"]]
+    for peak in data["peaks"]:
+        peak.pop("climbers", None)
+    data["peaks"][1]["climbers"] = team[:1]
+    edit_trip(trip_copy, peaks=data["peaks"])
+    table = summit_table(build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf"))
+    assert "Įkopė" in [c["header"] for c in table["columns"]]
+    by_peak = {r[0]: r for r in table["rows"]}
+    assert team[0] in by_peak[data["peaks"][1]["name"]]
+    assert ", ".join(team) in by_peak[data["peaks"][0]["name"]]       # left out: the whole team
+
+    data["peaks"][1]["climbers"] = team                                  # everyone everywhere: no column
+    edit_trip(trip_copy, peaks=data["peaks"])
+    table = summit_table(build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf"))
+    assert "Įkopė" not in [c["header"] for c in table["columns"]]
+
+    data["peaks"][1]["climbers"] = ["Niekas Nežinomas"]
+    edit_trip(trip_copy, peaks=data["peaks"])
+    with pytest.raises(pydantic.ValidationError):
+        build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+
+
 def test_gpx_note_under_daily_summary(trip_copy):
     from tripreports.build import build_report
 
