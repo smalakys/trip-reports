@@ -404,7 +404,8 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         loc.duration(t["net_time"]), loc.km(t["distance_m"]), loc.gain(t["ascent_m"]),
         loc.gain(-t["descent_m"]), loc.metres(t["min_alt_m"]), loc.metres(t["max_alt_m"])]
     rows.append([{"text": v, "bold": True} for v in total])
-    blocks.append(_table(cols, rows, key_first=True, total_row=True))
+    daily_table = _table(cols, rows, key_first=True, total_row=True)
+    blocks.append(daily_table)
     if assets.alt_chart and an.expedition:     # the whole stay at a glance, right after its table
         above = [d.night_m for d in an.expedition if d.night_m is not None and d.night_m > bc.altitude_m]
         blocks.append({
@@ -423,8 +424,11 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             "image": assets.acc, "ratio": assets.acc_ratio,
             "source": "", "caption": loc.fig("acc_caption"),
         })
-    if trip.gpx_note:     # after the table (and its chart): their figures come from the track
-        blocks.append({"type": "paras", "paras": rich(loc.fig("gpx_note"))})
+    if trip.gpx_note:     # after the table (and its charts): their figures come from the track
+        if blocks[-1] is daily_table:     # no chart between: the note stays on the table's page
+            daily_table["after"] = rich(loc.fig("gpx_note"))
+        else:
+            blocks.append({"type": "paras", "paras": rich(loc.fig("gpx_note"))})
     # the map and the profile, after the tables: they show the same recorded track
     source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
 
