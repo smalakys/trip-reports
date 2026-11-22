@@ -102,6 +102,7 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 |---|---|---|---|
 | rock; rocks | uola; uolos | | Ž. "Lengvomis uolomis". |
 | rocky | uolėtas | | E.g. "uolėtas ruožas". |
+| rock band (on a face) | uolėtas šlaitas | *ntk.* uolų juosta | User's choice. E.g. "rampomis, kuluarais ir kaminais perlipome uolėtą šlaitą". |
 | slab | plokštė | | Ž. E.g. "kuluarai, rampos ir plokštės". |
 | crack | plyšys; uolų plyšys | | Ž. Say "uolų plyšys" where a crevasse could be meant. |
 | chimney | kaminas | | Ž. |
