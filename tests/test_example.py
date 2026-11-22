@@ -300,7 +300,7 @@ def test_participant_note_and_former_peak_name(trip_copy):
     edit_trip(trip_copy, participants=data["participants"], peaks=data["peaks"])
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
     text = " ".join(_text(res.pdf).split())
-    assert f"{data['participants'][0]['name']} (tik Aušros viršūnė)" in text
+    assert f"{data['participants'][0]['name']}* (tik Aušros viršūnė)" in text
     assert "anksčiau – Senoji viršūnė" in text
 
 
@@ -374,9 +374,9 @@ def test_gpx_note_under_daily_summary(trip_copy):
 
 def test_climb_record_and_section_order(built):
     text = " ".join(_text(built["lt"].pdf).split())
-    assert "Jonas Jonaitis – vadovas" in text
+    assert "Jonas Jonaitis* – vadovas" in text
+    assert "* Kontaktinė informacija: jonas@example.com" in text   # the author's footnote
     assert "Alpinizmu užsiima dešimt metų" in text
-    assert "Ataskaitą parengė Jonas Jonaitis, jonas@example.com" in text
     assert "Maršruto pavadinimas Aušros grandinė" in text
     assert "Šaltiniai Fictional Alpine Club" in text          # a row of the record, not a section
     body = text[text.index("Maršruto informacija", text.index("Turinys") + 200):]

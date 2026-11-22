@@ -569,7 +569,7 @@
             }
           ],
           "default": null,
-          "description": "Shown with the report author (see reporter).",
+          "description": "The report author's goes in the footnote under the general table; anyone else's in parentheses after the name.",
           "title": "Contact"
         },
         "note": {
@@ -618,7 +618,7 @@
         },
         "reporter": {
           "default": false,
-          "description": "The person who prepared the report; their name and contact get their own row in the general information.",
+          "description": "The person who prepared the report: starred in the participants, with their contact in a footnote.",
           "title": "Reporter",
           "type": "boolean"
         }
