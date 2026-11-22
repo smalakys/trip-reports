@@ -53,6 +53,7 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 | traverse (of a ridge, of several peaks) | traversas | *ntk.* traversa | Ž. Masculine: "Karališkasis traversas", "keteros traversas". |
 | hillwalking, mountain trekking | kalnų turizmas; kalnų žygis | | Ž, T. |
 | ski touring, ski mountaineering | žygis slidėmis; slidžių žygis | skialpinizmas; *ntk.* kalnų slidinėjimas | Kalnų slidinėjimas is alpine skiing on pistes, a different sport. |
+| ski mountaineering (the discipline, as in gear) | slidžių alpinizmas | skialpinizmas | L. E.g. "standartinė slidžių alpinizmo įranga". |
 | scrambling | lengvas lipimas uolomis | | P. **?** |
 | via ferrata | via ferrata | | P. Kept as the name of the thing. |
 | expedition | ekspedicija | | |
