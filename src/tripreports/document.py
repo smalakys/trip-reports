@@ -513,35 +513,35 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         tw = text_width_mm(theme)
         page = theme["page"]
         page_h = page["height_mm"] - page["margin_top_mm"] - page["margin_bottom_mm"]
-        heading_room = 40  # the section heading shares the first photo page
-        items = []
-        for k, (photo, (_path, (pw, ph))) in enumerate(zip(trip.photos, assets.photos, strict=True)):
-            aspect = pw / ph
-            room = heading_room if k == 0 else 0
-            if photo.size == "full":
-                w, h = min(tw, (page_h - 30 - room) * aspect), None
-            elif aspect >= 1.3:      # landscape: full text width, lightly cropped to fit two per page
-                w, h = tw, 108.0
-            else:                    # portrait: centred, scaled to fit
-                w, h = min(tw, 108.0 * aspect), None
-            items.append({"size": photo.size, "image": _path, "w_mm": round(w, 2), "h_mm": h,
-                          "caption": L(photo.caption)})
-        pages, cur = [], []
-        for k, it in enumerate(items):
-            if k == 0 and it["size"] == "half":
-                pages.append([it])          # first page also holds the heading: one photo only
-            elif it["size"] == "full":
+        heading_room = 32   # the section heading shares the first photo page
+        cap_room = 12       # caption and gap under each photo
+        # Photos keep their own aspect ratio (never cropped). Landscape photos go two to a page,
+        # a portrait or "full" photo gets a page of its own.
+        groups: list[list] = []
+        cur: list = []
+        for photo, (_path, (pw, ph)) in zip(trip.photos, assets.photos, strict=True):
+            solo = photo.size == "full" or pw / ph < 1.3
+            entry = (photo, _path, pw / ph, solo)
+            if solo:
                 if cur:
-                    pages.append(cur)
+                    groups.append(cur)
                     cur = []
-                pages.append([it])
+                groups.append([entry])
             else:
-                cur.append(it)
+                cur.append(entry)
                 if len(cur) == 2:
-                    pages.append(cur)
+                    groups.append(cur)
                     cur = []
         if cur:
-            pages.append(cur)
+            groups.append(cur)
+        pages = []
+        for gi, grp in enumerate(groups):
+            room = heading_room if gi == 0 else 0
+            per = max(len(grp), 2) if not grp[0][3] else 1
+            h_max = (page_h - room) / per - cap_room
+            pages.append([{"size": photo.size, "image": _path, "w_mm": round(min(tw, h_max * aspect), 2),
+                           "h_mm": None, "caption": L(photo.caption)}
+                          for photo, _path, aspect, _solo in grp])
         blocks.append({"type": "photo_pages", "pages": pages})
 
     people_names = ", ".join(p.name for p in trip.participants)

@@ -16,7 +16,7 @@ from xml.sax.saxutils import escape
 from PIL import Image as PILImage
 from reportlab.graphics import renderPDF
 from reportlab.lib.colors import Color, HexColor
-from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
@@ -128,6 +128,7 @@ def make_styles(pal: Palette, lang: str, justify: bool) -> dict[str, ParagraphSt
     s["cell_mk"] = ParagraphStyle("cell_mk", parent=s["cell_m"], fontName=SEMI)
     s["caption"] = ParagraphStyle("caption", parent=body, fontSize=9.5, leading=12, alignment=TA_LEFT,
                                   textColor=pal.muted, spaceBefore=2, spaceAfter=0, hyphenationLang=None)
+    s["photo_caption"] = ParagraphStyle("photo_caption", parent=s["caption"], alignment=TA_CENTER)
     s["fig_title"] = ParagraphStyle("fig_title", parent=body, fontName=SEMI, fontSize=14, leading=17,
                                     alignment=TA_LEFT, spaceAfter=1, keepWithNext=1, hyphenationLang=None)
     s["fig_sub"] = ParagraphStyle("fig_sub", parent=body, fontSize=10.5, leading=13, alignment=TA_LEFT,
@@ -669,7 +670,7 @@ class Report(BaseDocTemplate):
                     with PILImage.open(src) as im:
                         h = w * im.size[1] / im.size[0]
                 img = Image(str(src), width=w, height=h, hAlign="CENTER")
-                out.append(KeepTogether([img, Paragraph(markup(it["caption"]), self.styles["caption"]),
+                out.append(KeepTogether([img, Paragraph(markup(it["caption"]), self.styles["photo_caption"]),
                                          Spacer(1, 16)]))
         return out
 
