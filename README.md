@@ -10,7 +10,7 @@ reports/my-climb/
 ```
 
 `tripreport build reports/my-climb --lang lt` produces a typeset A4 PDF that follows the
-association's report requirements: cover, contents, route (general information: route name, class, grades,
+association's report requirements: cover, route (general information: route name, class, grades,
 peaks, team with bios, report author, sources; description, technical sections, route condition), preparation and logistics (acclimatisation, tactics, gear, nights, outside support),
 progress (weather, diary), climb data (summit times, per-day statistics, route map on a real basemap
 and elevation profile), remarks and recommendations, and photo pages. Content can be written in several languages (Lithuanian and English are built in).

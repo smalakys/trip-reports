@@ -23,7 +23,7 @@ def test_text_is_lithuanian(built):
     text = _text(built["lt"].pdf)
     assert "Bendrieji duomenys" in text and "Aušros grandinė" in text
     assert "Techninė klasė" in text                 # the category pill and the class row
-    assert "Turinys" in text and "Santrauka" not in text
+    assert "Turinys" not in text and "Santrauka" not in text   # no table of contents
 
 
 def test_no_warnings(built):
@@ -379,10 +379,10 @@ def test_climb_record_and_section_order(built):
     assert "Alpinizmu užsiima dešimt metų" in text
     assert "Maršruto pavadinimas Aušros grandinė" in text
     assert "Šaltiniai Fictional Alpine Club" in text          # a row of the record, not a section
-    body = text[text.index("Maršruto informacija", text.index("Turinys") + 200):]
+    body = text[text.index("Maršruto informacija"):]
     order = ["Bendrieji duomenys", "Maršruto aprašymas", "Atskirų techninių atkarpų aprašymas", "Maršruto būklė ir įranga maršrute",
              "Pasiruošimas ir logistika", "Taktika", "Įranga", "Komandinė įranga", "Asmeninė įranga",
-             "Nakvynės", "Pagalba iš šalies", "Įkopimo eiga", "Orų sąlygos", "Įkopimo duomenys",
+             "Nakvynės", "Pagalba iš šalies", "Įkopimo eiga", "Meteorologinės sąlygos", "Įkopimo duomenys",
              "Viršūnių pasiekimo laikai", "Dienų santrauka", "Maršruto schema ir aukščio profilis",
              "Pastabos ir rekomendacijos", "Nuotraukos"]
     at = 0

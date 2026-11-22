@@ -348,23 +348,21 @@ class Report(BaseDocTemplate):
         c.saveState()
         c.setFillColor(p.inverse)
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
-        photo_h = self.H * 0.46
+        photo_h = self.H * 0.48
         crop = crop_to_fill(self.build_dir / cv["image"], self.build_dir / "assets" / "cover-crop.jpg",
                             self.W, photo_h)
         c.drawImage(str(crop), 0, self.H - photo_h, self.W, photo_h)
         x, top = self.ml, self.H - photo_h
 
-        # association band: a small caps line under the photo
-        y = top - 38
-        c.setFillColor(p.on_inverse)
-        c.setFont(SEMI, 6)
-        c.drawString(x, y + 1.5, f"{cv['association']} · {cv['kind']}".upper())
+        # no header line under the photo; the title block is placed below
+        y = top
 
         # Title (bold) and subtitle (light) fill the space between the band and the numbers;
         # their type steps down until they fit.
         stats_y = 150
         gap = 18   # space between the title and the subtitle: more than the title's own line gap
-        avail = (y - 20) - (stats_y + 46) - (46 if cv["badges"] else 0) - gap
+        region = (y - 24) - (stats_y + 46)      # from just under the photo to just over the numbers
+        avail = region - (46 if cv["badges"] else 0) - gap
         title = sub = None
         for t_size, s_size in ((46, 24), (40, 21), (34, 18), (30, 16), (26, 14)):
             title = Paragraph(markup(cv["title"]), ParagraphStyle(
@@ -381,7 +379,9 @@ class Report(BaseDocTemplate):
             sh = sub.wrap(self.tw, 400)[1] if sub else 0
             if th + sh <= avail:
                 break
-        y -= 30
+        # the title block sits a little above the middle of the space between photo and numbers
+        block = th + (gap + sh if sub else 0) + (28 if cv["badges"] else 0)
+        y -= 24 + min(max((region - block) * 0.4, 16), 40)
         title.drawOn(c, x, y - th)
         y -= th
         if sub:

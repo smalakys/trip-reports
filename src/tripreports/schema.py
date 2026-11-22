@@ -218,7 +218,14 @@ class Trip(_Model):
     grade: str | None = Field(
         None, description="Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. "
                           "Useful when the trip combines several routes: give the grade of the hardest "
-                          "sections. Shown in the general information after the class.")
+                          "sections. Shown in the general information after the class, and as a pill "
+                          "next to the class on the title page.")
+    grade_system: str | None = Field(None, description="Grading system on the title-page pill (default 'Alpine').")
+    ski_grade: str | None = Field(
+        None, description="Overall ski mountaineering grade of the trip, e.g. '3.1 / E1': the hardest ski "
+                          "grade. A glacier-blue pill on the title page, and written after the grade in the "
+                          "general information.")
+    ski_grade_system: str | None = Field(None, description="Ski grading system on its pill (default 'Toponeige').")
     participants: list[Person] = Field(default_factory=list)
     peaks: list[Peak] = Field(default_factory=list)
     route_description: LText | None = Field(
@@ -275,7 +282,7 @@ class Trip(_Model):
     acclimatisation_chart: bool = Field(
         False, description="Add the climb-high-sleep-low chart (needs three or more days)."
     )
-    show_contents: bool = True
+    show_contents: bool = Field(False, description="Add a table of contents after the title page (off by default: reports are short).")
     gpx_note: bool = Field(
         True, description="Add the standard note under the daily summary that its figures come from the "
                           "recorded GPS track and carry the usual GPS errors (the highest point in the table "

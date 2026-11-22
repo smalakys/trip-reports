@@ -1036,8 +1036,47 @@
         }
       ],
       "default": null,
-      "description": "Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. Useful when the trip combines several routes: give the grade of the hardest sections. Shown in the general information after the class.",
+      "description": "Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. Useful when the trip combines several routes: give the grade of the hardest sections. Shown in the general information after the class, and as a pill next to the class on the title page.",
       "title": "Grade"
+    },
+    "grade_system": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Grading system on the title-page pill (default 'Alpine').",
+      "title": "Grade System"
+    },
+    "ski_grade": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Overall ski mountaineering grade of the trip, e.g. '3.1 / E1': the hardest ski grade. A glacier-blue pill on the title page, and written after the grade in the general information.",
+      "title": "Ski Grade"
+    },
+    "ski_grade_system": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Ski grading system on its pill (default 'Toponeige').",
+      "title": "Ski Grade System"
     },
     "participants": {
       "items": {
@@ -1379,7 +1418,8 @@
       "type": "boolean"
     },
     "show_contents": {
-      "default": true,
+      "default": false,
+      "description": "Add a table of contents after the title page (off by default: reports are short).",
       "title": "Show Contents",
       "type": "boolean"
     },

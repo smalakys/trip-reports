@@ -141,6 +141,10 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
              if k != "peaks" or trip.peaks]
     region = ", ".join(x for x in (L(trip.region), L(trip.country)) if x)
     badges = [badge(L(trip.kind), None, key=True)] if trip.kind else []   # the report's category
+    if trip.grade:        # the grade of the whole route, after the class
+        badges.append(badge(trip.grade, trip.grade_system or "Alpine"))
+    if trip.ski_grade:
+        badges.append(badge(trip.ski_grade, trip.ski_grade_system or "Toponeige", ski=True))
     cover = {
         "image": assets.cover,
         "association": ui("association"),
@@ -174,7 +178,10 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         rows.append([ui("class"), {"lines": [[run(L(trip.kind), b=True)]
                                               + ([run(f" ({L(trip.kind_note)})")] if trip.kind_note else [])]}])
     if trip.grade:
-        rows.append([ui("grade"), bold(trip.grade)])
+        rows.append([ui("grade"), bold(trip.grade + (", " + ui("ski_grade_inline").format(grade=trip.ski_grade)
+                                                      if trip.ski_grade else ""))])
+    elif trip.ski_grade:
+        rows.append([ui("grade"), bold(ui("ski_grade_inline").format(grade=trip.ski_grade))])
     rows.append([ui("region"), bold(", ".join(x for x in (L(trip.country), L(trip.region)) if x))])
     if trip.peaks:
         rows.append([ui("peaks"), {"lines": [
@@ -267,7 +274,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     has_gear = bool(trip.gear or trip.team_gear or trip.personal_gear)
     if trip.acclimatisation or trip.tactics or has_gear or trip.accommodation or trip.accommodation_intro \
             or trip.camps or trip.support:
-        h1(ui("preparation"))
+        h1(ui("preparation"), newpage=True)
     if trip.acclimatisation:
         h2(ui("acclimatisation"))
         blocks.append({"type": "paras", "paras": rich(L(trip.acclimatisation))})
@@ -341,7 +348,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
 
     # ---- progress --------------------------------------------------------------------------
     if trip.days or trip.conditions:
-        h1(ui("progress"))
+        h1(ui("progress"), newpage=True)
         if trip.conditions:     # the weather, before the days it explains
             h2(ui("conditions"))
             blocks.append({"type": "paras", "paras": rich(L(trip.conditions))})
@@ -352,7 +359,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                            "diary": True})
 
     # ---- timing ----------------------------------------------------------------------------
-    h1(ui("timing"))
+    h1(ui("timing"), newpage=True)
     timed = [p for p in an.peaks if p.time is not None]
     if timed:
         h2(ui("summit_log"))
@@ -495,7 +502,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
 
     # ---- remarks and recommendations -------------------------------------------------------
     if trip.recommendations:
-        h1(ui("recommendations"))
+        h1(ui("recommendations"), newpage=True)
         blocks.append({"type": "paras", "paras": rich(L(trip.recommendations))})
 
     # ---- photos ----------------------------------------------------------------------------
