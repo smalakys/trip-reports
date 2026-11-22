@@ -31,8 +31,12 @@ class Person(_Model):
     experience: list[str] = Field(
         default_factory=list, description="Notable previous ascents, one per entry."
     )
-    contact: str | None = None
+    contact: str | None = Field(None, description="Shown with the report author (see reporter).")
     note: LText | None = Field(None, description="Short note after the name, e.g. which peaks they climbed.")
+    bio: LText | None = Field(None, description="A short bio: climbing background, earlier ascents.")
+    leader: bool = Field(False, description="Marks the team leader in the participants row.")
+    reporter: bool = Field(False, description="The person who prepared the report; their name and contact "
+                                              "get their own row in the general information.")
 
 
 class Peak(_Model):
@@ -206,15 +210,27 @@ class Trip(_Model):
     kind_note: LText | None = Field(
         None, description="Shown in parentheses after the class in the general information table only "
                           "(not on the title page), e.g. 'unclassified ski tour'.")
+    grade: str | None = Field(
+        None, description="Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. "
+                          "Useful when the trip combines several routes: give the grade of the hardest "
+                          "sections. Shown in the general information after the class.")
     participants: list[Person] = Field(default_factory=list)
     peaks: list[Peak] = Field(default_factory=list)
     route_description: LText | None = Field(
         None, description="A few paragraphs about the route itself, shown first under route information."
     )
     routes: list[RouteGroup] = Field(default_factory=list)
+    route_conditions: LText | None = Field(
+        None, description="The route's state (snow, ice, rime, crevasses) and equipment found on it (anchors, "
+                          "fixed ropes, cables), shown under route information.")
     tactics: LText | None = None
-    gear: list[LText] = Field(default_factory=list)
-    conditions: LText | None = None
+    gear: list[LText] = Field(default_factory=list, description="Gear used, one item per entry.")
+    team_gear: list[LText] = Field(
+        default_factory=list, description="Shared gear (rope, rack), listed under its own subheading.")
+    personal_gear: list[LText] = Field(
+        default_factory=list, description="Gear each person carried, listed under its own subheading.")
+    conditions: LText | None = Field(
+        None, description="Weather during the climb, shown at the start of the progress section.")
     accommodation_intro: LText | None = Field(
         None, description="Text above the nights table, e.g. how the camps are named and where they are.")
     accommodation: list[Accommodation] = Field(default_factory=list)
@@ -225,12 +241,15 @@ class Trip(_Model):
         default_factory=list,
         description="Named daytime stops (1 to 5 hours) shown on the elevation profile.",
     )
-    support: LText | None = None
+    support: LText | None = Field(
+        None, description="Outside help: guides, porters, staffed huts or camps, depots, rescue.")
     base_camp: BaseCamp | None = Field(
         None, description="High-altitude expeditions: the base camp. Nights without an accommodation "
                           "entry between arrival and departure are spent here. The daily table then lists "
                           "every day of the stay with where its night was spent, instead of a table of nights.")
-    acclimatisation: LText | None = None
+    acclimatisation: LText | None = Field(None, description="Acclimatisation and training climbs.")
+    recommendations: LText | None = Field(
+        None, description="Remarks and recommendations for those planning the route, near the end of the report.")
     days: list[Day] = Field(default_factory=list)
     gpx: str | list[TrackFile] = Field(
         "track.gpx",
@@ -240,7 +259,8 @@ class Trip(_Model):
     )
     map: MapSettings = Field(default_factory=MapSettings)
     photos: list[Photo] = Field(default_factory=list)
-    references: list[str] = Field(default_factory=list)
+    references: list[str] = Field(
+        default_factory=list, description="Guidebooks and other sources, shown in the general information.")
     calibration: Calibration | None = None
     cover_stats: list[CoverStat] = Field(
         default_factory=lambda: ["highest_point", "ascent", "distance", "peaks", "days"],
@@ -251,6 +271,10 @@ class Trip(_Model):
         False, description="Add the climb-high-sleep-low chart (needs three or more days)."
     )
     show_contents: bool = True
+    gpx_note: bool = Field(
+        True, description="Add the standard note under the daily summary that its figures come from the "
+                          "recorded GPS track and carry the usual GPS errors (the highest point in the table "
+                          "need not match the highest summit).")
 
     def gpx_files(self) -> list[TrackFile]:
         return [TrackFile(file=self.gpx)] if isinstance(self.gpx, str) else list(self.gpx)

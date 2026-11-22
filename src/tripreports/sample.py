@@ -210,10 +210,16 @@ region: Aušros Alpės (išgalvotas rajonas)
 country: Šveicarija
 kind: Techninė klasė
 kind_note: išgalvotas žygis
+grade: AD
 
 participants:
   - name: Jonas Jonaitis
+    leader: true
+    reporter: true
+    contact: jonas@example.com
+    bio: Alpinizmu užsiima dešimt metų, kopė Alpėse ir Kaukaze.
   - name: Rūta Rutaitė
+    bio: Uolų laipiotoja, antrasis sezonas aukštuose kalnuose.
 
 peaks:
   - {name: Ledo smailė, elevation_m: 3987, lat: 46.53503, lon: 8.07321, grade: PD, grade_system: Alpine, ski_grade: 2.3 / E1, ski_grade_system: Toponeige}
@@ -229,11 +235,11 @@ route_description: >-
 
 routes:
   - name: Ledo grandinė
-    grade: AD
+    grade: AD, III
     grade_system: Alpine
     ski_grade: 2.3 / E1
     ski_grade_system: Toponeige
-    note: III · 700 m
+    note: 700 m
     sections:
       - {name: Ledo smailė, grade: PD, pitches: "1", leader: Jonas}
       - {name: Žaibo kupolas, grade: PD+, pitches: "2", leader: Pakaitomis}
@@ -247,11 +253,17 @@ routes:
       - {name: Vėjo dantis, grade: AD, pitches: "1", leader: Jonas}
 
 tactics: Lipome susijungę virve su slenkančia sauga, techninėse vietose – su apatine sauga.
-gear:
+team_gear:
   - 1 × 60 m virvė
-  - 6 × kamalotai
+  - 6 × frendai
   - 4 × ledo sraigtai
+personal_gear:
+  - Ledkirtis
+  - Katės
 conditions: Slėnyje dieną buvo apie 26 °C, 4000 m aukštyje – apie 0–5 °C.
+route_conditions: Keteros sausos, ledynuose – kietas firnas. Stacionarių saugos taškų maršrute nėra.
+support: Nakvojome prižiūrimose trobelėse; gidų ir nešikų paslaugomis nesinaudojome.
+recommendations: Išeiti anksti, kol sniegas kietas; trobelėse vietas rezervuoti iš anksto.
 
 accommodation:
   - {date: 2025-08-10, place: Alfos trobelė, kind: Trobelė, altitude_m: 2850}

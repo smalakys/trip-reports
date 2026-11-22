@@ -41,7 +41,8 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
    are scaled to match. Do not override computed numbers the user has not given.
 4. Day text: use `{distance}`, `{ascent}`, `{descent}`, `{duration}`, `{hours}`, `{max_alt}`, `{min_alt}`
    for that day's figures so the diary and the tables cannot disagree. Do not end a sentence right
-   after `{hours}` with a full stop (it already ends in "val.").
+   after `{hours}` with a full stop (it already ends in "val."). Use them only where a figure belongs in
+   a sentence: no closing "Dienos duomenys: …" line, since the daily summary table already lists them.
 5. Peaks need `lat`/`lon` (copy them from the track's local maxima) so summit times are found
    automatically. Name nights through `accommodation` and long daytime stops through `breaks`;
    they label the shaded bands on the elevation profile.
@@ -71,22 +72,35 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 ## House style (decided with the user; do not undo without asking)
 
 - Layout follows a classic technical report: flat title page (photo above, one asphalt block below,
-  nothing set over the photo, tricolour flag in its 3:5 proportions), contents on page 2 straight after
+  nothing set over the photo, tricolour flag in its 3:5 proportions before the association name at the
+  bottom, not in the band under the photo), contents on page 2 straight after
   the title page, **no summary section**, **no numbering anywhere** (sections, tables, figures),
   **no orange bars or rules above headings**, body text 10 pt justified with hyphenation, tables with a
   hairline under the header and a heavier rule at the bottom, no lines between rows, key-value tables
   without a header row.
+- Report order (follows the association's requirements and reads as a story): Maršruto informacija
+  (Bendrieji duomenys, one table: route name (the report title), class, grade, region, peaks (what
+  holds for any ascent of the route), then date and participants with bios (what this ascent was),
+  report author with contact, sources: no separate sources section; then the description, technical
+  sections, route condition), Pasiruošimas ir logistika (acclimatisation,
+  tactics, gear, nights, outside support), Įkopimo eiga (weather, then the days), Įkopimo duomenys
+  (summit times, daily summary, GPS note, then the map and profile page: everything recorded on the
+  climb comes after the story of it), Pastabos ir rekomendacijos, Nuotraukos. A rock-class report may
+  later want a guidebook topo under the route instead. `conditions` is the weather;
+  `route_conditions` is the route's state and equipment on it.
 - Colour: LAA palette. Small orange text uses `accent-text` (the darker orange), never `brand`; `brand`
   is for plot series, the track and the first title-page number. Table row names and day dates are in
   `accent-text`. Everything else is asphalt ink and greys.
 - Title page: the headline numbers come from `cover_stats` (two to five; the first is accent-coloured;
   choose others for other report types). The pill under the subtitle is the report's category (`kind`,
-  for example "Techninė klasė"); it is also the "Klasė" row of the general information table. There is no
+  for example "Techninė klasė"); it is also the "Klasė" row of "Bendrieji duomenys". There is no
   outcome line.
 - Figures: the finding is the title. The route map and the elevation profile sit on one page. The map is
   all orange (no colour per day) with day-start numbers. The profile labels the nights with the hut
   names and named stops with `breaks`. No "source: GPS" lines and no captions; keep only the map-tile
   attribution. The climb-high-sleep-low chart is optional (`acclimatisation_chart: true`), off by default.
+  The one GPS remark is the standard note under the daily summary (`gpx_note`, on by default): its
+  figures come from the recorded track and carry GPS errors.
 - High-altitude class ("Aukštuminė klasė") reports always set `base_camp` (altitude, arrival, departure).
   Then the daily table lists every day of the stay with a "Nakvynė" column (days without a track greyed
   out as rest days) followed by the whole-expedition altitude chart, and there is no separate table of
@@ -95,6 +109,9 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   "Nakvynės"), and add `high_point_m` to diary days that went high without a track.
 - Dates are ISO, times 24 h, durations `h:mm`, gains with a sign (`+6 119 m`), thousands separated by a
   non-breaking space in Lithuanian.
+- Route sections table: a route's own row carries its grade pill in the "Sudėtingumas" column, with the
+  rock grade or slope inside the pill as the guidebook writes it (`AD-, III`, `AD-, 55°`); length, times
+  and other facts go under "Pastabos", never beside the pill. Ridges are always "ketera" in the text.
 - Keep the optional layout rules robust: a lone, unadorned route group has no heading row; short tables
   never split across pages or away from their heading.
 
@@ -104,7 +121,7 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   plural for the team, "man" where the user speaks about themself). Informative and concrete, never stiff.
 - **Never translate names.** Peaks, huts, passes, glaciers, places and routes stay in the original
   language (a peak such as Mont Blanc, a hut such as Rifugio Torino, a glacier such as Vallée Blanche). Do not decline a name by inventing a Lithuanian form.
-- Use the climbers' vocabulary: katės (crampons), ledkirtis, virvė, nusileidimas virve, ketera,
+- Use the climbers' vocabulary: katės (crampons), ledkirtis, virvė, frendas (cam), kaištis (nut), nusileidimas virve, ketera,
   perėja, trobelė (generic "hut"), traversas (masculine: "Karališkasis traversas", not "traversa").
   If unsure of a term, ask the user.
 - Reuse a participant's account only for what is common to the trip (times, places, conditions,

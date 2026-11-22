@@ -553,6 +553,7 @@
             }
           ],
           "default": null,
+          "description": "Shown with the report author (see reporter).",
           "title": "Contact"
         },
         "note": {
@@ -573,6 +574,37 @@
           "default": null,
           "description": "Short note after the name, e.g. which peaks they climbed.",
           "title": "Note"
+        },
+        "bio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A short bio: climbing background, earlier ascents.",
+          "title": "Bio"
+        },
+        "leader": {
+          "default": false,
+          "description": "Marks the team leader in the participants row.",
+          "title": "Leader",
+          "type": "boolean"
+        },
+        "reporter": {
+          "default": false,
+          "description": "The person who prepared the report; their name and contact get their own row in the general information.",
+          "title": "Reporter",
+          "type": "boolean"
         }
       },
       "required": [
@@ -978,6 +1010,19 @@
       "description": "Shown in parentheses after the class in the general information table only (not on the title page), e.g. 'unclassified ski tour'.",
       "title": "Kind Note"
     },
+    "grade": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. Useful when the trip combines several routes: give the grade of the hardest sections. Shown in the general information after the class.",
+      "title": "Grade"
+    },
     "participants": {
       "items": {
         "$ref": "#/$defs/Person"
@@ -1018,6 +1063,25 @@
       "title": "Routes",
       "type": "array"
     },
+    "route_conditions": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The route's state (snow, ice, rime, crevasses) and equipment found on it (anchors, fixed ropes, cables), shown under route information.",
+      "title": "Route Conditions"
+    },
     "tactics": {
       "anyOf": [
         {
@@ -1037,6 +1101,7 @@
       "title": "Tactics"
     },
     "gear": {
+      "description": "Gear used, one item per entry.",
       "items": {
         "anyOf": [
           {
@@ -1051,6 +1116,42 @@
         ]
       },
       "title": "Gear",
+      "type": "array"
+    },
+    "team_gear": {
+      "description": "Shared gear (rope, rack), listed under its own subheading.",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "title": "Team Gear",
+      "type": "array"
+    },
+    "personal_gear": {
+      "description": "Gear each person carried, listed under its own subheading.",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "title": "Personal Gear",
       "type": "array"
     },
     "conditions": {
@@ -1069,6 +1170,7 @@
         }
       ],
       "default": null,
+      "description": "Weather during the climb, shown at the start of the progress section.",
       "title": "Conditions"
     },
     "accommodation_intro": {
@@ -1129,6 +1231,7 @@
         }
       ],
       "default": null,
+      "description": "Outside help: guides, porters, staffed huts or camps, depots, rescue.",
       "title": "Support"
     },
     "base_camp": {
@@ -1159,7 +1262,27 @@
         }
       ],
       "default": null,
+      "description": "Acclimatisation and training climbs.",
       "title": "Acclimatisation"
+    },
+    "recommendations": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Remarks and recommendations for those planning the route, near the end of the report.",
+      "title": "Recommendations"
     },
     "days": {
       "items": {
@@ -1195,6 +1318,7 @@
       "type": "array"
     },
     "references": {
+      "description": "Guidebooks and other sources, shown in the general information.",
       "items": {
         "type": "string"
       },
@@ -1241,6 +1365,12 @@
     "show_contents": {
       "default": true,
       "title": "Show Contents",
+      "type": "boolean"
+    },
+    "gpx_note": {
+      "default": true,
+      "description": "Add the standard note under the daily summary that its figures come from the recorded GPS track and carry the usual GPS errors (the highest point in the table need not match the highest summit).",
+      "title": "Gpx Note",
       "type": "boolean"
     }
   },

@@ -280,7 +280,8 @@ def test_camps_get_one_table_per_mountain(trip_copy):
         {"name": "C1", "altitude_m": 3200, "group": "Antras kalnas", "note": "Po serakais"}])
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
     doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
-    heads = [b["text"] for b in doc["blocks"] if b["type"] == "h3"]
+    heads = [b["text"] for b in doc["blocks"] if b["type"] == "h3"
+             and b["text"] not in ("Komandinė įranga", "Asmeninė įranga")]
     tables = [b for b in doc["blocks"] if b["type"] == "table" and b["columns"][0]["header"] == "Stovykla"]
     assert heads == ["Pirmas kalnas", "Antras kalnas"]          # a subsection per mountain ...
     assert [len(t["rows"]) for t in tables] == [2, 1]          # ... and no heading row in its table
@@ -318,6 +319,44 @@ def test_peak_grades_in_general_info_and_summit_times(trip_copy):
     text = " ".join(_text(res.pdf).split())
     assert f"{data['peaks'][0]['name']} (3 987 m) – PD-, slidėmis 2.3 / E1" in text
     assert f"{data['peaks'][1]['name']} (4 105 m) –" not in text
+
+
+def test_gpx_note_under_daily_summary(trip_copy):
+    from tripreports.build import build_report
+
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert "matavimo paklaidų" in text
+    edit_trip(trip_copy, gpx_note=False)
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert "matavimo paklaidų" not in " ".join(_text(res.pdf).split())
+
+
+def test_climb_record_and_section_order(built):
+    text = " ".join(_text(built["lt"].pdf).split())
+    assert "Jonas Jonaitis – vadovas" in text
+    assert "Alpinizmu užsiima dešimt metų" in text
+    assert "Ataskaitą parengė Jonas Jonaitis, jonas@example.com" in text
+    assert "Maršruto pavadinimas Aušros grandinė" in text
+    assert "Šaltiniai Fictional Alpine Club" in text          # a row of the record, not a section
+    body = text[text.index("Maršruto informacija", text.index("Turinys") + 200):]
+    order = ["Bendrieji duomenys", "Maršruto aprašymas", "Atskirų techninių atkarpų aprašymas", "Maršruto būklė ir įranga maršrute",
+             "Pasiruošimas ir logistika", "Taktika", "Įranga", "Komandinė įranga", "Asmeninė įranga",
+             "Nakvynės", "Pagalba iš šalies", "Įkopimo eiga", "Orų sąlygos", "Įkopimo duomenys",
+             "Viršūnių pasiekimo laikai", "Dienų santrauka", "Maršruto schema ir aukščio profilis",
+             "Pastabos ir rekomendacijos", "Nuotraukos"]
+    at = 0
+    for heading in order:      # each heading comes after the one before it
+        at = body.index(heading, at) + len(heading)
+
+
+def test_trip_grade_in_general_info(trip_copy):
+    from tripreports.build import build_report
+
+    edit_trip(trip_copy, grade="AD+, III")
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert "Sudėtingumas AD+, III" in text
 
 
 def test_kind_note_in_general_info_only(trip_copy):

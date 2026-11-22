@@ -334,15 +334,11 @@ class Report(BaseDocTemplate):
         c.drawImage(str(crop), 0, self.H - photo_h, self.W, photo_h)
         x, top = self.ml, self.H - photo_h
 
-        # association band: the tricolour strip (3:5 flag) beside a small caps line
+        # association band: a small caps line under the photo
         y = top - 38
-        flag_w, flag_h = 30.0, 18.0
-        for i, col in enumerate(p.flags):
-            c.setFillColor(col)
-            c.rect(x, y + 3 + flag_h / 2 - (i + 1) * flag_h / 3, flag_w, flag_h / 3, stroke=0, fill=1)
         c.setFillColor(p.on_inverse)
         c.setFont(SEMI, 6)
-        c.drawString(x + flag_w + 12, y + 1.5, f"{cv['association']} · {cv['kind']}".upper())
+        c.drawString(x, y + 1.5, f"{cv['association']} · {cv['kind']}".upper())
 
         # Title (bold) and subtitle (light) fill the space between the band and the numbers;
         # their type steps down until they fit.
@@ -387,9 +383,16 @@ class Report(BaseDocTemplate):
             c.setFont(BODY, 8.5)
             c.drawString(x + 120, my, row["v"])
             my -= 14
-        # wordmark: the association's name in the display face
+        # wordmark: the tricolour (a 3:5 flag, as tall as the capitals) and the association's name
+        # in the display face
+        flag_h = pdfmetrics.getFont(DISPLAY).face.capHeight / 1000 * 19
+        flag_w = flag_h * 5 / 3
+        for i, col in enumerate(p.flags):
+            c.setFillColor(col)
+            c.rect(x, 36 + flag_h - (i + 1) * flag_h / 3, flag_w, flag_h / 3, stroke=0, fill=1)
+        c.setFillColor(p.on_inverse)
         c.setFont(DISPLAY, 19)
-        c.drawString(x, 36, cv["association"])
+        c.drawString(x + flag_w + 10, 36, cv["association"])
         c.restoreState()
 
     def _cover_stats(self, c, x: float, y: float, stats: list[dict]) -> None:
@@ -483,10 +486,15 @@ class Report(BaseDocTemplate):
                     story.append(Spacer(1, 4))
             elif t == "table":
                 tbl = self.table(b)
+                lead = []          # every heading right above the table (a section and its subsection)
+                while story and isinstance(story[-1], Heading):
+                    lead.insert(0, story.pop())
                 if len(b["rows"]) <= 14:    # short tables never split across pages, nor from their heading
-                    lead = [story.pop()] if story and isinstance(story[-1], Heading) else []
                     story.append(KeepTogether([*lead, Spacer(1, 4), tbl]))
-                else:
+                else:   # a long one starts under its heading and runs on; the heading needs room for a few rows
+                    for h in lead:
+                        h.keepWithNext = 0
+                    story += [CondPageBreak(150), *lead, Spacer(1, 4)] if lead else []
                     story.append(tbl)
                 story.append(Spacer(1, 12))
             elif t == "figure":
@@ -551,6 +559,21 @@ class Report(BaseDocTemplate):
                                            ("VALIGN", (0, 0), (-1, -1), "MIDDLE")]))
                     out.append(t)
                     styles += [("SPAN", (ci, r), (ci + span - 1, r)), ("TOPPADDING", (0, r), (-1, r), 10)]
+                elif is_dict and cell.get("heading"):    # a route's own row inside a table of its sections
+                    out.append(Paragraph(markup(cell["text"]), S["cell_b"]))
+                    styles.append(("TOPPADDING", (0, r), (-1, r), 10))
+                elif is_dict and cell.get("badges"):
+                    gbs = [GradeBadge(bd["grade"], bd["system"], bd["key"], p, ski=bd.get("ski", False))
+                           for bd in cell["badges"]]
+                    if len(gbs) == 1:
+                        out.append(gbs[0])
+                    else:
+                        bt = Table([gbs], colWidths=[gb.w + 4 for gb in gbs], hAlign="LEFT")
+                        bt.setStyle(TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                                ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+                        out.append(bt)
                 elif is_dict and cell.get("badge"):
                     bd = cell["badge"]
                     out.append(GradeBadge(bd["grade"], bd["system"], bd["key"], p, ski=bd.get("ski", False)))

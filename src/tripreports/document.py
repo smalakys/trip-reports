@@ -159,11 +159,14 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     if trip.show_contents:
         blocks.append({"type": "contents", "title": ui("contents"), "newpage": True})
 
-    # ---- general information ---------------------------------------------------------------
-    h1(ui("general"), newpage=True)
-    rows = [[ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
+    # ---- route information -----------------------------------------------------------------
+    h1(ui("route"), newpage=True)
+    h2(ui("general"))      # the route and team at a glance: what the association reads first
+    rows = [[ui("route_name"), title]]     # the route first; the date and the team, which change, last
     if trip.kind:
         rows.append([ui("class"), L(trip.kind) + (f" ({L(trip.kind_note)})" if trip.kind_note else "")])
+    if trip.grade:
+        rows.append([ui("grade"), trip.grade])
     rows.append([ui("region"), ", ".join(x for x in (L(trip.country), L(trip.region)) if x)])
     if trip.peaks:
         rows.append([ui("peaks"), "\n".join(
@@ -174,18 +177,24 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             for p in trip.peaks)])
     people = []
     for person in trip.participants:
-        lines = [f"{person.name} ({L(person.note)})" if person.note else person.name]
+        name = f"{person.name} ({L(person.note)})" if person.note else person.name
+        lines = [name + (f" – {ui('leader')}" if person.leader else "")]
+        if person.bio:
+            lines.append(L(person.bio))
         if person.experience:
             lines.append(", ".join(person.experience))
-        if person.contact:
+        if person.contact and not person.reporter:
             lines.append(person.contact)
         people.append("\n".join(lines))
+    rows.append([ui("date"), loc.date_range(trip.start_date, trip.end_date)])
     if people:
         rows.append([ui("participants"), "\n\n".join(people)])
+    for person in (p for p in trip.participants if p.reporter):
+        rows.append([ui("reporter"), ", ".join(x for x in (person.name, person.contact) if x)])
+    if trip.references:
+        rows.append([ui("references"), "\n".join(trip.references)])
     blocks.append(_kv_table(loc, rows))
 
-    # ---- route information -----------------------------------------------------------------
-    h1(ui("route"))
     if trip.route_description:
         h2(ui("route_description"))
         blocks.append({"type": "paras", "paras": rich(L(trip.route_description))})
@@ -194,8 +203,9 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         h2(ui("route_sections"))
         has_pitches = any(s.pitches for g in trip.routes for s in g.sections)
         has_leader = any(s.leader for g in trip.routes for s in g.sections)
-        has_note = any(s.note for g in trip.routes for s in g.sections)
-        has_grade = any(s.grade for g in trip.routes for s in g.sections)
+        has_note = any(s.note for g in trip.routes for s in g.sections) or any(g.note for g in trip.routes)
+        has_grade = any(s.grade for g in trip.routes for s in g.sections) or any(
+            g.grade or g.ski_grade for g in trip.routes)
         cols = [{"header": ui("section"), "align": "left", "width": 2.0}]
         if has_grade:
             cols.append({"header": ui("grade"), "align": "left", "width": 1.45})
@@ -207,11 +217,18 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             cols.append({"header": ui("notes"), "align": "left", "width": 2.2})
         trows = []
         for g in trip.routes:
-            if len(trip.routes) > 1 or g.grade or g.ski_grade or g.note:   # a lone, unadorned route needs no heading row
-                trows.append([{"group": True, "span": len(cols), "text": g.name,
-                               "badges": ([badge(g.grade, g.grade_system, key=True)] if g.grade else [])
-                               + ([badge(g.ski_grade, g.ski_grade_system, ski=True)] if g.ski_grade else []),
-                               "note": L(g.note)}])
+            badges = ([badge(g.grade, g.grade_system, key=True)] if g.grade else []) + (
+                [badge(g.ski_grade, g.ski_grade_system, ski=True)] if g.ski_grade else [])
+            if not (len(trip.routes) > 1 or badges or g.note):   # a lone, unadorned route needs no heading row
+                pass
+            elif has_grade:     # the route's own row: its grade in the grade column, its note under notes
+                row = [{"text": g.name, "heading": True}, {"badges": badges} if badges else ""]
+                row += [""] * (has_pitches + has_leader)
+                if has_note:
+                    row.append(L(g.note))
+                trows.append(row)
+            else:
+                trows.append([{"group": True, "span": len(cols), "text": g.name, "badges": [], "note": L(g.note)}])
             for s in g.sections:
                 row = [s.name]
                 if has_grade:
@@ -225,16 +242,30 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 trows.append(row)
         blocks.append(_table(cols, trows, key_first=True))
 
-    if trip.tactics or trip.gear:
+    if trip.route_conditions:
+        h2(ui("route_conditions"))
+        blocks.append({"type": "paras", "paras": rich(L(trip.route_conditions))})
+
+    # ---- preparation and logistics ---------------------------------------------------------
+    has_gear = bool(trip.gear or trip.team_gear or trip.personal_gear)
+    if trip.acclimatisation or trip.tactics or has_gear or trip.accommodation or trip.accommodation_intro \
+            or trip.camps or trip.support:
+        h1(ui("preparation"))
+    if trip.acclimatisation:
+        h2(ui("acclimatisation"))
+        blocks.append({"type": "paras", "paras": rich(L(trip.acclimatisation))})
+    if trip.tactics:
         h2(ui("tactics"))
-        if trip.tactics:
-            blocks.append({"type": "paras", "paras": rich(L(trip.tactics))})
+        blocks.append({"type": "paras", "paras": rich(L(trip.tactics))})
+    if has_gear:
+        h2(ui("gear"))
         if trip.gear:
             blocks.append({"type": "bullets", "items": [L(g) for g in trip.gear]})
-    if trip.conditions:
-        h2(ui("conditions"))
-        blocks.append({"type": "paras", "paras": rich(L(trip.conditions))})
-    if trip.accommodation or trip.support or trip.accommodation_intro or trip.camps:
+        for key, items in (("team_gear", trip.team_gear), ("personal_gear", trip.personal_gear)):
+            if items:
+                blocks.append({"type": "h3", "text": ui(key)})
+                blocks.append({"type": "bullets", "items": [L(g) for g in items]})
+    if trip.accommodation or trip.accommodation_intro or trip.camps:
         h2(ui("accommodation"))
         if trip.accommodation_intro:
             blocks.append({"type": "paras", "paras": rich(L(trip.accommodation_intro))})
@@ -282,9 +313,21 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 row.append(loc.metres(a.altitude_m) if a.altitude_m else "")
                 arows.append(row)
             blocks.append(_table(cols, arows, key_first=True))
-        if trip.support:
-            blocks.append({"type": "labeled", "items": [
-                {"label": ui("support"), "paras": rich(L(trip.support))}]})
+    if trip.support:
+        h2(ui("support"))
+        blocks.append({"type": "paras", "paras": rich(L(trip.support))})
+
+    # ---- progress --------------------------------------------------------------------------
+    if trip.days or trip.conditions:
+        h1(ui("progress"))
+        if trip.conditions:     # the weather, before the days it explains
+            h2(ui("conditions"))
+            blocks.append({"type": "paras", "paras": rich(L(trip.conditions))})
+        for d in sorted(trip.days, key=lambda d: d.date):
+            h2(L(d.title), prefix=loc.short_date(d.date))
+            by_date = next((x for x in an.days if x.date == d.date), None)
+            blocks.append({"type": "paras", "paras": rich(fill_day_numbers(L(d.text), by_date, loc)),
+                           "diary": True})
 
     # ---- timing ----------------------------------------------------------------------------
     h1(ui("timing"))
@@ -372,21 +415,17 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             "image": assets.alt_chart, "ratio": assets.alt_chart_ratio,
             "source": "", "caption": "",
         })
-
-    # ---- progress --------------------------------------------------------------------------
-    if trip.days or trip.acclimatisation:
-        h1(ui("progress"))
-        if trip.acclimatisation:
-            h2(ui("acclimatisation"))
-            blocks.append({"type": "paras", "paras": rich(L(trip.acclimatisation))})
-        for d in sorted(trip.days, key=lambda d: d.date):
-            h2(L(d.title), prefix=loc.short_date(d.date))
-            by_date = next((x for x in an.days if x.date == d.date), None)
-            blocks.append({"type": "paras", "paras": rich(fill_day_numbers(L(d.text), by_date, loc)),
-                           "diary": True})
-
-    # ---- figures ---------------------------------------------------------------------------
-    h1(ui("figures"), newpage=True)
+    if assets.acc:
+        blocks.append({
+            "type": "figure",
+            "headline": loc.fig("acc_title").format(delta=loc.metres(assets.acc_delta_m)),
+            "subtitle": loc.fig("acc_subtitle"),
+            "image": assets.acc, "ratio": assets.acc_ratio,
+            "source": "", "caption": loc.fig("acc_caption"),
+        })
+    if trip.gpx_note:     # after the table (and its chart): their figures come from the track
+        blocks.append({"type": "paras", "paras": rich(loc.fig("gpx_note"))})
+    # the map and the profile, after the tables: they show the same recorded track
     source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
 
     def map_and_profile(route_map, under, map_ratio, profile, profile_ratio, distance_m, ascent_m, days):
@@ -406,22 +445,20 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         }]
 
     if an.groups:
-        for i, (g, f) in enumerate(zip(an.groups, assets.groups, strict=True)):
-            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": i > 0,
+        for g, f in zip(an.groups, assets.groups, strict=True):
+            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": False,
                            "figures": map_and_profile(f.route_map, f.route_map_under, f.route_map_ratio,
                                                       f.profile, f.profile_ratio, g.distance_m, g.ascent_m,
                                                       g.n_days)})
-    else:
-        blocks += map_and_profile(assets.route_map, assets.route_map_under, assets.route_map_ratio,
-                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days)
-    if assets.acc:
-        blocks.append({
-            "type": "figure",
-            "headline": loc.fig("acc_title").format(delta=loc.metres(assets.acc_delta_m)),
-            "subtitle": loc.fig("acc_subtitle"),
-            "image": assets.acc, "ratio": assets.acc_ratio,
-            "source": "", "caption": loc.fig("acc_caption"),
-        })
+    else:     # the map and the profile share one page, under their own heading
+        blocks.append({"type": "figure_group", "title": ui("route_maps"), "newpage": False,
+                       "figures": map_and_profile(assets.route_map, assets.route_map_under, assets.route_map_ratio,
+                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days)})
+
+    # ---- remarks and recommendations -------------------------------------------------------
+    if trip.recommendations:
+        h1(ui("recommendations"))
+        blocks.append({"type": "paras", "paras": rich(L(trip.recommendations))})
 
     # ---- photos ----------------------------------------------------------------------------
     if trip.photos:
@@ -459,10 +496,6 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         if cur:
             pages.append(cur)
         blocks.append({"type": "photo_pages", "pages": pages})
-
-    if trip.references:
-        h1(ui("references"), newpage=True)
-        blocks.append({"type": "bullets", "items": trip.references, "plain": True})
 
     people_names = ", ".join(p.name for p in trip.participants)
     return {
