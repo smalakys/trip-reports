@@ -253,10 +253,13 @@ routes:
       - {name: Vėjo dantis, grade: AD, pitches: "1", leader: Jonas}
 
 tactics: Lipome susijungę virve su slenkančia sauga, techninėse vietose – su apatine sauga.
-gear:
+team_gear:
   - 1 × 60 m virvė
-  - 6 × kamalotai
+  - 6 × frendai
   - 4 × ledo sraigtai
+personal_gear:
+  - Ledkirtis
+  - Katės
 conditions: Slėnyje dieną buvo apie 26 °C, 4000 m aukštyje – apie 0–5 °C.
 route_conditions: Keteros sausos, ledynuose – kietas firnas. Stacionarių saugos taškų maršrute nėra.
 support: Nakvojome prižiūrimose trobelėse; gidų ir nešikų paslaugomis nesinaudojome.

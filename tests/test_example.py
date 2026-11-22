@@ -280,7 +280,8 @@ def test_camps_get_one_table_per_mountain(trip_copy):
         {"name": "C1", "altitude_m": 3200, "group": "Antras kalnas", "note": "Po serakais"}])
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
     doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
-    heads = [b["text"] for b in doc["blocks"] if b["type"] == "h3"]
+    heads = [b["text"] for b in doc["blocks"] if b["type"] == "h3"
+             and b["text"] not in ("Komandinė įranga", "Asmeninė įranga")]
     tables = [b for b in doc["blocks"] if b["type"] == "table" and b["columns"][0]["header"] == "Stovykla"]
     assert heads == ["Pirmas kalnas", "Antras kalnas"]          # a subsection per mountain ...
     assert [len(t["rows"]) for t in tables] == [2, 1]          # ... and no heading row in its table
@@ -340,7 +341,7 @@ def test_climb_record_and_section_order(built):
     assert "Šaltiniai Fictional Alpine Club" in text          # a row of the record, not a section
     body = text[text.index("Maršruto informacija", text.index("Turinys") + 200):]
     order = ["Bendrieji duomenys", "Maršruto aprašymas", "Atskirų techninių atkarpų aprašymas", "Maršruto būklė ir įranga maršrute",
-             "Pasiruošimas ir logistika", "Taktika", "Panaudota įranga",
+             "Pasiruošimas ir logistika", "Taktika", "Įranga", "Komandinė įranga", "Asmeninė įranga",
              "Nakvynės", "Pagalba iš šalies", "Įkopimo eiga", "Orų sąlygos", "Įkopimo duomenys",
              "Viršūnių pasiekimo laikai", "Dienų santrauka", "Maršruto schema ir aukščio profilis",
              "Pastabos ir rekomendacijos", "Nuotraukos"]

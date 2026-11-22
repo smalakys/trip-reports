@@ -225,6 +225,10 @@ class Trip(_Model):
                           "fixed ropes, cables), shown under route information.")
     tactics: LText | None = None
     gear: list[LText] = Field(default_factory=list, description="Gear used, one item per entry.")
+    team_gear: list[LText] = Field(
+        default_factory=list, description="Shared gear (rope, rack), listed under its own subheading.")
+    personal_gear: list[LText] = Field(
+        default_factory=list, description="Gear each person carried, listed under its own subheading.")
     conditions: LText | None = Field(
         None, description="Weather during the climb, shown at the start of the progress section.")
     accommodation_intro: LText | None = Field(

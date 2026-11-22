@@ -119,7 +119,7 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   plural for the team, "man" where the user speaks about themself). Informative and concrete, never stiff.
 - **Never translate names.** Peaks, huts, passes, glaciers, places and routes stay in the original
   language (a peak such as Mont Blanc, a hut such as Rifugio Torino, a glacier such as Vallée Blanche). Do not decline a name by inventing a Lithuanian form.
-- Use the climbers' vocabulary: katės (crampons), ledkirtis, virvė, nusileidimas virve, ketera,
+- Use the climbers' vocabulary: katės (crampons), ledkirtis, virvė, frendas (cam), kaištis (nut), nusileidimas virve, ketera,
   perėja, trobelė (generic "hut"), traversas (masculine: "Karališkasis traversas", not "traversa").
   If unsure of a term, ask the user.
 - Reuse a participant's account only for what is common to the trip (times, places, conditions,

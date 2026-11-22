@@ -246,7 +246,8 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         blocks.append({"type": "paras", "paras": rich(L(trip.route_conditions))})
 
     # ---- preparation and logistics ---------------------------------------------------------
-    if trip.acclimatisation or trip.tactics or trip.gear or trip.accommodation or trip.accommodation_intro \
+    has_gear = bool(trip.gear or trip.team_gear or trip.personal_gear)
+    if trip.acclimatisation or trip.tactics or has_gear or trip.accommodation or trip.accommodation_intro \
             or trip.camps or trip.support:
         h1(ui("preparation"))
     if trip.acclimatisation:
@@ -255,9 +256,14 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     if trip.tactics:
         h2(ui("tactics"))
         blocks.append({"type": "paras", "paras": rich(L(trip.tactics))})
-    if trip.gear:
+    if has_gear:
         h2(ui("gear"))
-        blocks.append({"type": "bullets", "items": [L(g) for g in trip.gear]})
+        if trip.gear:
+            blocks.append({"type": "bullets", "items": [L(g) for g in trip.gear]})
+        for key, items in (("team_gear", trip.team_gear), ("personal_gear", trip.personal_gear)):
+            if items:
+                blocks.append({"type": "h3", "text": ui(key)})
+                blocks.append({"type": "bullets", "items": [L(g) for g in items]})
     if trip.accommodation or trip.accommodation_intro or trip.camps:
         h2(ui("accommodation"))
         if trip.accommodation_intro:

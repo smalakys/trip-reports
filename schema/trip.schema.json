@@ -1118,6 +1118,42 @@
       "title": "Gear",
       "type": "array"
     },
+    "team_gear": {
+      "description": "Shared gear (rope, rack), listed under its own subheading.",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "title": "Team Gear",
+      "type": "array"
+    },
+    "personal_gear": {
+      "description": "Gear each person carried, listed under its own subheading.",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "title": "Personal Gear",
+      "type": "array"
+    },
     "conditions": {
       "anyOf": [
         {
