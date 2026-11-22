@@ -159,9 +159,10 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     if trip.show_contents:
         blocks.append({"type": "contents", "title": ui("contents"), "newpage": True})
 
-    # ---- climb record (passport) ------------------------------------------------------------
-    h1(ui("general"), newpage=True)
-    rows = [[ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
+    # ---- route information -----------------------------------------------------------------
+    h1(ui("route"), newpage=True)
+    h2(ui("general"))      # the route and team at a glance: what the association reads first
+    rows = [[ui("route_name"), title], [ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
     if trip.kind:
         rows.append([ui("class"), L(trip.kind) + (f" ({L(trip.kind_note)})" if trip.kind_note else "")])
     if trip.grade:
@@ -174,14 +175,6 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             + ((", " if p.grade else " – ") + ui("ski_grade_inline").format(grade=p.ski_grade) if p.ski_grade else "")
             + (", " + ui("former_name").format(name=p.former_name) if p.former_name else "")
             for p in trip.peaks)])
-    rows.append([ui("span"), ui("span_value").format(           # lowest point of the track to the highest point
-        diff=loc.metres(highest - t["min_alt_m"]), low=loc.num(t["min_alt_m"]), high=loc.metres(highest),
-        distance=loc.km(t["distance_m"]), ascent=loc.gain(t["ascent_m"]))])
-    if trip.accommodation and not trip.base_camp:     # with a base camp the daily table lists the nights
-        places = list(dict.fromkeys(a.place for a in sorted(trip.accommodation, key=lambda a: a.date)))
-        rows.append([ui("accommodation"), f"{loc.plural(len(trip.accommodation), 'nights')}: {', '.join(places)}"])
-    if trip.first_ascent is not None:
-        rows.append([ui("first_ascent"), ui("yes" if trip.first_ascent else "no")])
     people = []
     for person in trip.participants:
         name = f"{person.name} ({L(person.note)})" if person.note else person.name
@@ -201,8 +194,6 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         rows.append([ui("references"), "\n".join(trip.references)])
     blocks.append(_kv_table(loc, rows))
 
-    # ---- route information -----------------------------------------------------------------
-    h1(ui("route"))
     if trip.route_description:
         h2(ui("route_description"))
         blocks.append({"type": "paras", "paras": rich(L(trip.route_description))})
@@ -253,35 +244,6 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     if trip.route_conditions:
         h2(ui("route_conditions"))
         blocks.append({"type": "paras", "paras": rich(L(trip.route_conditions))})
-    # the map and the profile close the route section, on a page of their own
-    source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
-
-    def map_and_profile(route_map, under, map_ratio, profile, profile_ratio, distance_m, ascent_m, days):
-        days_txt = loc.fig("single_day") if days == 1 else loc.days(days)
-        return [{
-            "type": "figure",
-            "headline": loc.fig("route_title").format(distance=loc.km(distance_m, 0), days=days_txt),
-            "subtitle": loc.fig("route_subtitle_single" if days == 1 else "route_subtitle"),
-            "image": route_map, "under": under, "ratio": map_ratio,
-            "source": source_map, "caption": "",
-        }, {
-            "type": "figure",
-            "headline": loc.fig("profile_title").format(ascent=loc.gain(ascent_m), days=days_txt),
-            "subtitle": loc.fig("profile_subtitle"),
-            "image": profile, "ratio": profile_ratio,
-            "source": "", "caption": "",
-        }]
-
-    if an.groups:
-        for g, f in zip(an.groups, assets.groups, strict=True):
-            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": False,
-                           "figures": map_and_profile(f.route_map, f.route_map_under, f.route_map_ratio,
-                                                      f.profile, f.profile_ratio, g.distance_m, g.ascent_m,
-                                                      g.n_days)})
-    else:     # the map and the profile share one page, under their own heading
-        blocks.append({"type": "figure_group", "title": ui("route_maps"), "newpage": False,
-                       "figures": map_and_profile(assets.route_map, assets.route_map_under, assets.route_map_ratio,
-                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days)})
 
     # ---- preparation and logistics ---------------------------------------------------------
     if trip.acclimatisation or trip.tactics or trip.gear or trip.accommodation or trip.accommodation_intro \
@@ -456,6 +418,35 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         })
     if trip.gpx_note:     # after the table (and its chart): their figures come from the track
         blocks.append({"type": "paras", "paras": rich(loc.fig("gpx_note"))})
+    # the map and the profile, after the tables: they show the same recorded track
+    source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
+
+    def map_and_profile(route_map, under, map_ratio, profile, profile_ratio, distance_m, ascent_m, days):
+        days_txt = loc.fig("single_day") if days == 1 else loc.days(days)
+        return [{
+            "type": "figure",
+            "headline": loc.fig("route_title").format(distance=loc.km(distance_m, 0), days=days_txt),
+            "subtitle": loc.fig("route_subtitle_single" if days == 1 else "route_subtitle"),
+            "image": route_map, "under": under, "ratio": map_ratio,
+            "source": source_map, "caption": "",
+        }, {
+            "type": "figure",
+            "headline": loc.fig("profile_title").format(ascent=loc.gain(ascent_m), days=days_txt),
+            "subtitle": loc.fig("profile_subtitle"),
+            "image": profile, "ratio": profile_ratio,
+            "source": "", "caption": "",
+        }]
+
+    if an.groups:
+        for g, f in zip(an.groups, assets.groups, strict=True):
+            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": False,
+                           "figures": map_and_profile(f.route_map, f.route_map_under, f.route_map_ratio,
+                                                      f.profile, f.profile_ratio, g.distance_m, g.ascent_m,
+                                                      g.n_days)})
+    else:     # the map and the profile share one page, under their own heading
+        blocks.append({"type": "figure_group", "title": ui("route_maps"), "newpage": False,
+                       "figures": map_and_profile(assets.route_map, assets.route_map_under, assets.route_map_ratio,
+                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days)})
 
     # ---- remarks and recommendations -------------------------------------------------------
     if trip.recommendations:

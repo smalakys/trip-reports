@@ -259,7 +259,6 @@ gear:
   - 4 × ledo sraigtai
 conditions: Slėnyje dieną buvo apie 26 °C, 4000 m aukštyje – apie 0–5 °C.
 route_conditions: Keteros sausos, ledynuose – kietas firnas. Stacionarių saugos taškų maršrute nėra.
-first_ascent: false
 support: Nakvojome prižiūrimose trobelėse; gidų ir nešikų paslaugomis nesinaudojome.
 recommendations: Išeiti anksti, kol sniegas kietas; trobelėse vietas rezervuoti iš anksto.
 

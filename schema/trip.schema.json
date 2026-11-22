@@ -602,7 +602,7 @@
         },
         "reporter": {
           "default": false,
-          "description": "The person who prepared the report; their name and contact get their own row in the climb record.",
+          "description": "The person who prepared the report; their name and contact get their own row in the general information.",
           "title": "Reporter",
           "type": "boolean"
         }
@@ -1082,19 +1082,6 @@
       "description": "The route's state (snow, ice, rime, crevasses) and equipment found on it (anchors, fixed ropes, cables), shown under route information.",
       "title": "Route Conditions"
     },
-    "first_ascent": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Whether the route was climbed for the first time; shown in the climb record when set.",
-      "title": "First Ascent"
-    },
     "tactics": {
       "anyOf": [
         {
@@ -1295,7 +1282,7 @@
       "type": "array"
     },
     "references": {
-      "description": "Guidebooks and other sources, shown in the climb record.",
+      "description": "Guidebooks and other sources, shown in the general information.",
       "items": {
         "type": "string"
       },

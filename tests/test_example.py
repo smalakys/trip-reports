@@ -21,7 +21,7 @@ def test_pdf_is_built(built):
 
 def test_text_is_lithuanian(built):
     text = _text(built["lt"].pdf)
-    assert "Įkopimo pasas" in text and "Aušros grandinė" in text
+    assert "Bendrieji duomenys" in text and "Aušros grandinė" in text
     assert "Techninė klasė" in text                 # the category pill and the class row
     assert "Turinys" in text and "Santrauka" not in text
 
@@ -336,13 +336,13 @@ def test_climb_record_and_section_order(built):
     assert "Jonas Jonaitis – vadovas" in text
     assert "Alpinizmu užsiima dešimt metų" in text
     assert "Ataskaitą parengė Jonas Jonaitis, jonas@example.com" in text
-    assert "Pirmas maršruto praėjimas ne" in text
-    assert "Aukščių skirtumas ir ilgis" in text and "Nakvynės 4 nakvynės:" in text
+    assert "Maršruto pavadinimas Aušros grandinė" in text
     assert "Šaltiniai Fictional Alpine Club" in text          # a row of the record, not a section
-    body = text[text.index("Įkopimo pasas", text.index("Turinys") + 50):]
-    order = ["Maršruto informacija", "Atskirų techninių atkarpų aprašymas", "Maršruto būklė ir įranga maršrute",
-             "Maršruto schema ir aukščio profilis", "Pasiruošimas ir logistika", "Taktika", "Panaudota įranga",
-             "Nakvynės", "Pagalba iš šalies", "Įkopimo eiga", "Orų sąlygos", "Laikas, praleistas įkopime",
+    body = text[text.index("Maršruto informacija", text.index("Turinys") + 200):]
+    order = ["Bendrieji duomenys", "Maršruto aprašymas", "Atskirų techninių atkarpų aprašymas", "Maršruto būklė ir įranga maršrute",
+             "Pasiruošimas ir logistika", "Taktika", "Panaudota įranga",
+             "Nakvynės", "Pagalba iš šalies", "Įkopimo eiga", "Orų sąlygos", "Įkopimo duomenys",
+             "Viršūnių pasiekimo laikai", "Dienų santrauka", "Maršruto schema ir aukščio profilis",
              "Pastabos ir rekomendacijos", "Nuotraukos"]
     at = 0
     for heading in order:      # each heading comes after the one before it

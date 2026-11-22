@@ -10,11 +10,10 @@ reports/my-climb/
 ```
 
 `tripreport build reports/my-climb --lang lt` produces a typeset A4 PDF that follows the
-association's report requirements: cover, contents, climb record (class, grades, peaks, height
-difference, nights, team with bios, report author, sources), route (description, technical sections,
-route condition, route map on a real basemap and elevation profile), preparation and logistics
-(acclimatisation, tactics, gear, nights, outside support), progress (weather, diary), timing (summit
-times, per-day statistics), remarks and recommendations, and photo pages. Content can be written in several languages (Lithuanian and English are built in).
+association's report requirements: cover, contents, route (general information: route name, class, grades,
+peaks, team with bios, report author, sources; description, technical sections, route condition), preparation and logistics (acclimatisation, tactics, gear, nights, outside support),
+progress (weather, diary), climb data (summit times, per-day statistics, route map on a real basemap
+and elevation profile), remarks and recommendations, and photo pages. Content can be written in several languages (Lithuanian and English are built in).
 
 ## Quick start
 
@@ -91,7 +90,7 @@ Points worth knowing:
   `high_point_m` in its diary entry.
 - **Calibration:** GPS altitude is noisy, so computed ascent is rarely exact. `calibration:` (`distance_km`, `ascent_m`, optional `descent_m`) sets the totals you trust; every day's figures are scaled by the same factor so tables still add up. Day texts can use `{distance}`, `{ascent}`, `{descent}`, `{duration}`, `{hours}`, `{max_alt}`, `{min_alt}` to quote that day's figures.
 - **Grades:** give a route group `grade` (as the guidebook writes it) and `grade_system` (Alpine, UIAA, Cat.); they become badges. A peak can carry the grade of the route climbed (`grade`, `grade_system`):
-  it is listed with the peak in the climb record and as a badge in the summit times. A ski
+  it is listed with the peak in the general information and as a badge in the summit times. A ski
   mountaineering grade (`ski_grade`, `ski_grade_system`, e.g. `2.3 / E1`, Toponeige) is shown beside it.
 - **Class:** `kind` is the title-page pill and the "Klasė" row; `kind_note` adds a remark in parentheses
   to the row only.
