@@ -71,7 +71,8 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 ## House style (decided with the user; do not undo without asking)
 
 - Layout follows a classic technical report: flat title page (photo above, one asphalt block below,
-  nothing set over the photo, tricolour flag in its 3:5 proportions), contents on page 2 straight after
+  nothing set over the photo, tricolour flag in its 3:5 proportions before the association name at the
+  bottom, not in the band under the photo), contents on page 2 straight after
   the title page, **no summary section**, **no numbering anywhere** (sections, tables, figures),
   **no orange bars or rules above headings**, body text 10 pt justified with hyphenation, tables with a
   hairline under the header and a heavier rule at the bottom, no lines between rows, key-value tables

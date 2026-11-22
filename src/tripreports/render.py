@@ -334,15 +334,11 @@ class Report(BaseDocTemplate):
         c.drawImage(str(crop), 0, self.H - photo_h, self.W, photo_h)
         x, top = self.ml, self.H - photo_h
 
-        # association band: the tricolour strip (3:5 flag) beside a small caps line
+        # association band: a small caps line under the photo
         y = top - 38
-        flag_w, flag_h = 30.0, 18.0
-        for i, col in enumerate(p.flags):
-            c.setFillColor(col)
-            c.rect(x, y + 3 + flag_h / 2 - (i + 1) * flag_h / 3, flag_w, flag_h / 3, stroke=0, fill=1)
         c.setFillColor(p.on_inverse)
         c.setFont(SEMI, 6)
-        c.drawString(x + flag_w + 12, y + 1.5, f"{cv['association']} · {cv['kind']}".upper())
+        c.drawString(x, y + 1.5, f"{cv['association']} · {cv['kind']}".upper())
 
         # Title (bold) and subtitle (light) fill the space between the band and the numbers;
         # their type steps down until they fit.
@@ -387,9 +383,16 @@ class Report(BaseDocTemplate):
             c.setFont(BODY, 8.5)
             c.drawString(x + 120, my, row["v"])
             my -= 14
-        # wordmark: the association's name in the display face
+        # wordmark: the tricolour (a 3:5 flag, as tall as the capitals) and the association's name
+        # in the display face
+        flag_h = pdfmetrics.getFont(DISPLAY).face.capHeight / 1000 * 19
+        flag_w = flag_h * 5 / 3
+        for i, col in enumerate(p.flags):
+            c.setFillColor(col)
+            c.rect(x, 36 + flag_h - (i + 1) * flag_h / 3, flag_w, flag_h / 3, stroke=0, fill=1)
+        c.setFillColor(p.on_inverse)
         c.setFont(DISPLAY, 19)
-        c.drawString(x, 36, cv["association"])
+        c.drawString(x + flag_w + 10, 36, cv["association"])
         c.restoreState()
 
     def _cover_stats(self, c, x: float, y: float, stats: list[dict]) -> None:
