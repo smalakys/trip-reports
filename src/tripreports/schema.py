@@ -241,6 +241,9 @@ class Trip(_Model):
         default_factory=list, description="Shared gear (rope, rack), listed under its own subheading.")
     personal_gear: list[LText] = Field(
         default_factory=list, description="Gear each person carried, listed under its own subheading.")
+    diary_intro: LText | None = Field(
+        None, description="A short note at the very start of the progress section, before the weather "
+                          "and the days (for example whose notes the diary is).")
     conditions: LText | None = Field(
         None, description="Weather during the climb, shown at the start of the progress section.")
     accommodation_intro: LText | None = Field(

@@ -1209,6 +1209,25 @@
       "title": "Personal Gear",
       "type": "array"
     },
+    "diary_intro": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A short note at the very start of the progress section, before the weather and the days (for example whose notes the diary is).",
+      "title": "Diary Intro"
+    },
     "conditions": {
       "anyOf": [
         {
