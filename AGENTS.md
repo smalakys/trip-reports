@@ -74,8 +74,8 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 
 - Layout follows a classic technical report: flat title page (photo above, one asphalt block below,
   nothing set over the photo, tricolour flag in its 3:5 proportions before the association name at the
-  bottom, not in the band under the photo), contents on page 2 straight after
-  the title page, **no summary section**, **no numbering anywhere** (sections, tables, figures),
+  bottom, no header line under the photo), **no table of contents** (reports are short; `show_contents: true`
+  adds one after the title page), **no summary section**, **no numbering anywhere** (sections, tables, figures),
   **no orange bars or rules above headings**, body text 10 pt justified with hyphenation, tables with a
   hairline under the header and a heavier rule at the bottom, no lines between rows, key-value tables
   without a header row.
@@ -94,8 +94,9 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 - Colour: LAA palette. Small orange text uses `accent-text` (the darker orange), never `brand`; `brand`
   is for plot series, the track and the first title-page number. Table row names and day dates are in
   `accent-text`. Everything else is asphalt ink and greys.
-- Title page: the headline numbers come from `cover_stats` (two to five; the first is accent-coloured;
-  choose others for other report types). The pill under the subtitle is the report's category (`kind`,
+- Title page: the headline numbers come from `cover_stats` (two to five; the first is accent-coloured).
+  All reports use the same five (the default: highest point, ascent, distance, peaks, days); do not
+  set `cover_stats` in a trip file unless the user asks for different ones. The pill under the subtitle is the report's category (`kind`,
   for example "Techninė klasė"); it is also the "Klasė" row of "Bendrieji duomenys". There is no
   outcome line.
 - Figures: the finding is the title. The route map and the elevation profile sit on one page. The map is
@@ -110,6 +111,13 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   nights. Give every night away from base camp an `accommodation`
   entry with its altitude, describe the camps once in `camps` (one table per mountain under
   "Nakvynės"), and add `high_point_m` to diary days that went high without a track.
+- Route description (`route_description`, the text right under "Bendrieji duomenys"): the route first, in
+  as many paragraphs as it needs (what it links, where it goes, the idea of the route, how we did it),
+  then the history last (first ascents, the peak's standing, a fitting quotation). **No conditions in it**
+  (snow, ice, rime, weather, best season, hazards): they belong in `route_conditions` ("Maršruto būklė ir
+  įranga maršrute"), which is two paragraphs: the conditions, then the gear found on the route. For a
+  short report (Aiguille Verte) the whole description fits on page 2 with the table. Quotations stay in
+  their original language, with the author named.
 - Dates are ISO, times 24 h, durations `h:mm`, gains with a sign (`+6 119 m`), thousands separated by a
   non-breaking space in Lithuanian.
 - Route sections table: a route's own row carries its grade pill in the "Sudėtingumas" column, with the
