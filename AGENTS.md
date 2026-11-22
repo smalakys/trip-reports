@@ -95,6 +95,9 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   "Nakvynės"), and add `high_point_m` to diary days that went high without a track.
 - Dates are ISO, times 24 h, durations `h:mm`, gains with a sign (`+6 119 m`), thousands separated by a
   non-breaking space in Lithuanian.
+- Route sections table: a route's own row carries its grade pill in the "Sudėtingumas" column, with the
+  rock grade or slope inside the pill as the guidebook writes it (`AD-, III`, `AD-, 55°`); length, times
+  and other facts go under "Pastabos", never beside the pill. Ridges are always "ketera" in the text.
 - Keep the optional layout rules robust: a lone, unadorned route group has no heading row; short tables
   never split across pages or away from their heading.
 

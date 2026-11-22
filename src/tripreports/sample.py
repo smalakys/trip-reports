@@ -230,11 +230,11 @@ route_description: >-
 
 routes:
   - name: Ledo grandinė
-    grade: AD
+    grade: AD, III
     grade_system: Alpine
     ski_grade: 2.3 / E1
     ski_grade_system: Toponeige
-    note: III · 700 m
+    note: 700 m
     sections:
       - {name: Ledo smailė, grade: PD, pitches: "1", leader: Jonas}
       - {name: Žaibo kupolas, grade: PD+, pitches: "2", leader: Pakaitomis}

@@ -551,6 +551,21 @@ class Report(BaseDocTemplate):
                                            ("VALIGN", (0, 0), (-1, -1), "MIDDLE")]))
                     out.append(t)
                     styles += [("SPAN", (ci, r), (ci + span - 1, r)), ("TOPPADDING", (0, r), (-1, r), 10)]
+                elif is_dict and cell.get("heading"):    # a route's own row inside a table of its sections
+                    out.append(Paragraph(markup(cell["text"]), S["cell_b"]))
+                    styles.append(("TOPPADDING", (0, r), (-1, r), 10))
+                elif is_dict and cell.get("badges"):
+                    gbs = [GradeBadge(bd["grade"], bd["system"], bd["key"], p, ski=bd.get("ski", False))
+                           for bd in cell["badges"]]
+                    if len(gbs) == 1:
+                        out.append(gbs[0])
+                    else:
+                        bt = Table([gbs], colWidths=[gb.w + 4 for gb in gbs], hAlign="LEFT")
+                        bt.setStyle(TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                                ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+                        out.append(bt)
                 elif is_dict and cell.get("badge"):
                     bd = cell["badge"]
                     out.append(GradeBadge(bd["grade"], bd["system"], bd["key"], p, ski=bd.get("ski", False)))

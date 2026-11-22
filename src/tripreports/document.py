@@ -196,8 +196,9 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         h2(ui("route_sections"))
         has_pitches = any(s.pitches for g in trip.routes for s in g.sections)
         has_leader = any(s.leader for g in trip.routes for s in g.sections)
-        has_note = any(s.note for g in trip.routes for s in g.sections)
-        has_grade = any(s.grade for g in trip.routes for s in g.sections)
+        has_note = any(s.note for g in trip.routes for s in g.sections) or any(g.note for g in trip.routes)
+        has_grade = any(s.grade for g in trip.routes for s in g.sections) or any(
+            g.grade or g.ski_grade for g in trip.routes)
         cols = [{"header": ui("section"), "align": "left", "width": 2.0}]
         if has_grade:
             cols.append({"header": ui("grade"), "align": "left", "width": 1.45})
@@ -209,11 +210,18 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             cols.append({"header": ui("notes"), "align": "left", "width": 2.2})
         trows = []
         for g in trip.routes:
-            if len(trip.routes) > 1 or g.grade or g.ski_grade or g.note:   # a lone, unadorned route needs no heading row
-                trows.append([{"group": True, "span": len(cols), "text": g.name,
-                               "badges": ([badge(g.grade, g.grade_system, key=True)] if g.grade else [])
-                               + ([badge(g.ski_grade, g.ski_grade_system, ski=True)] if g.ski_grade else []),
-                               "note": L(g.note)}])
+            badges = ([badge(g.grade, g.grade_system, key=True)] if g.grade else []) + (
+                [badge(g.ski_grade, g.ski_grade_system, ski=True)] if g.ski_grade else [])
+            if not (len(trip.routes) > 1 or badges or g.note):   # a lone, unadorned route needs no heading row
+                pass
+            elif has_grade:     # the route's own row: its grade in the grade column, its note under notes
+                row = [{"text": g.name, "heading": True}, {"badges": badges} if badges else ""]
+                row += [""] * (has_pitches + has_leader)
+                if has_note:
+                    row.append(L(g.note))
+                trows.append(row)
+            else:
+                trows.append([{"group": True, "span": len(cols), "text": g.name, "badges": [], "note": L(g.note)}])
             for s in g.sections:
                 row = [s.name]
                 if has_grade:
