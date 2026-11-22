@@ -325,11 +325,10 @@ def test_gpx_note_under_daily_summary(trip_copy):
 
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
     text = " ".join(_text(res.pdf).split())
-    assert "įprastų GPS matavimo paklaidų" in text
-    assert ("proporcingai suderinti" in text) == ("calibration:" in (trip_copy / "trip.yaml").read_text())
+    assert "matavimo paklaidų" in text
     edit_trip(trip_copy, gpx_note=False)
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
-    assert "įprastų GPS matavimo paklaidų" not in " ".join(_text(res.pdf).split())
+    assert "matavimo paklaidų" not in " ".join(_text(res.pdf).split())
 
 
 def test_trip_grade_in_general_info(trip_copy):

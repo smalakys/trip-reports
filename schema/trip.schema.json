@@ -1258,7 +1258,7 @@
     },
     "gpx_note": {
       "default": true,
-      "description": "Add the standard note under the daily summary that its figures come from the recorded GPS track and carry the usual GPS errors (the highest point in the table need not match the highest summit). Mentions the calibration when one is set.",
+      "description": "Add the standard note under the daily summary that its figures come from the recorded GPS track and carry the usual GPS errors (the highest point in the table need not match the highest summit).",
       "title": "Gpx Note",
       "type": "boolean"
     }
