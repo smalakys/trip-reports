@@ -76,12 +76,19 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   **no orange bars or rules above headings**, body text 10 pt justified with hyphenation, tables with a
   hairline under the header and a heavier rule at the bottom, no lines between rows, key-value tables
   without a header row.
+- Report order (follows the association's requirements and reads as a story): Įkopimo pasas (one table:
+  class, grade, region, peaks, height difference and length, nights, first ascent, participants with
+  bios, report author with contact, sources: no separate sources section), Maršruto informacija
+  (description, technical sections, route condition, then the map and profile page), Pasiruošimas ir
+  logistika (acclimatisation, tactics, gear, nights, outside support), Įkopimo eiga (weather, then the
+  days), Laikas, praleistas įkopime, Pastabos ir rekomendacijos, Nuotraukos. `conditions` is the weather;
+  `route_conditions` is the route's state and equipment on it.
 - Colour: LAA palette. Small orange text uses `accent-text` (the darker orange), never `brand`; `brand`
   is for plot series, the track and the first title-page number. Table row names and day dates are in
   `accent-text`. Everything else is asphalt ink and greys.
 - Title page: the headline numbers come from `cover_stats` (two to five; the first is accent-coloured;
   choose others for other report types). The pill under the subtitle is the report's category (`kind`,
-  for example "Techninė klasė"); it is also the "Klasė" row of the general information table. There is no
+  for example "Techninė klasė"); it is also the "Klasė" row of the climb record ("Įkopimo pasas"). There is no
   outcome line.
 - Figures: the finding is the title. The route map and the elevation profile sit on one page. The map is
   all orange (no colour per day) with day-start numbers. The profile labels the nights with the hut

@@ -553,6 +553,7 @@
             }
           ],
           "default": null,
+          "description": "Shown with the report author (see reporter).",
           "title": "Contact"
         },
         "note": {
@@ -573,6 +574,37 @@
           "default": null,
           "description": "Short note after the name, e.g. which peaks they climbed.",
           "title": "Note"
+        },
+        "bio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A short bio: climbing background, earlier ascents.",
+          "title": "Bio"
+        },
+        "leader": {
+          "default": false,
+          "description": "Marks the team leader in the participants row.",
+          "title": "Leader",
+          "type": "boolean"
+        },
+        "reporter": {
+          "default": false,
+          "description": "The person who prepared the report; their name and contact get their own row in the climb record.",
+          "title": "Reporter",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1031,6 +1063,38 @@
       "title": "Routes",
       "type": "array"
     },
+    "route_conditions": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The route's state (snow, ice, rime, crevasses) and equipment found on it (anchors, fixed ropes, cables), shown under route information.",
+      "title": "Route Conditions"
+    },
+    "first_ascent": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Whether the route was climbed for the first time; shown in the climb record when set.",
+      "title": "First Ascent"
+    },
     "tactics": {
       "anyOf": [
         {
@@ -1050,6 +1114,7 @@
       "title": "Tactics"
     },
     "gear": {
+      "description": "Gear used, one item per entry.",
       "items": {
         "anyOf": [
           {
@@ -1082,6 +1147,7 @@
         }
       ],
       "default": null,
+      "description": "Weather during the climb, shown at the start of the progress section.",
       "title": "Conditions"
     },
     "accommodation_intro": {
@@ -1142,6 +1208,7 @@
         }
       ],
       "default": null,
+      "description": "Outside help: guides, porters, staffed huts or camps, depots, rescue.",
       "title": "Support"
     },
     "base_camp": {
@@ -1172,7 +1239,27 @@
         }
       ],
       "default": null,
+      "description": "Acclimatisation and training climbs.",
       "title": "Acclimatisation"
+    },
+    "recommendations": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Remarks and recommendations for those planning the route, near the end of the report.",
+      "title": "Recommendations"
     },
     "days": {
       "items": {
@@ -1208,6 +1295,7 @@
       "type": "array"
     },
     "references": {
+      "description": "Guidebooks and other sources, shown in the climb record.",
       "items": {
         "type": "string"
       },

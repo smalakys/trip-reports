@@ -214,7 +214,12 @@ grade: AD
 
 participants:
   - name: Jonas Jonaitis
+    leader: true
+    reporter: true
+    contact: jonas@example.com
+    bio: Alpinizmu užsiima dešimt metų, kopė Alpėse ir Kaukaze.
   - name: Rūta Rutaitė
+    bio: Uolų laipiotoja, antrasis sezonas aukštuose kalnuose.
 
 peaks:
   - {name: Ledo smailė, elevation_m: 3987, lat: 46.53503, lon: 8.07321, grade: PD, grade_system: Alpine, ski_grade: 2.3 / E1, ski_grade_system: Toponeige}
@@ -253,6 +258,10 @@ gear:
   - 6 × kamalotai
   - 4 × ledo sraigtai
 conditions: Slėnyje dieną buvo apie 26 °C, 4000 m aukštyje – apie 0–5 °C.
+route_conditions: Keteros sausos, ledynuose – kietas firnas. Stacionarių saugos taškų maršrute nėra.
+first_ascent: false
+support: Nakvojome prižiūrimose trobelėse; gidų ir nešikų paslaugomis nesinaudojome.
+recommendations: Išeiti anksti, kol sniegas kietas; trobelėse vietas rezervuoti iš anksto.
 
 accommodation:
   - {date: 2025-08-10, place: Alfos trobelė, kind: Trobelė, altitude_m: 2850}

@@ -483,10 +483,15 @@ class Report(BaseDocTemplate):
                     story.append(Spacer(1, 4))
             elif t == "table":
                 tbl = self.table(b)
+                lead = []          # every heading right above the table (a section and its subsection)
+                while story and isinstance(story[-1], Heading):
+                    lead.insert(0, story.pop())
                 if len(b["rows"]) <= 14:    # short tables never split across pages, nor from their heading
-                    lead = [story.pop()] if story and isinstance(story[-1], Heading) else []
                     story.append(KeepTogether([*lead, Spacer(1, 4), tbl]))
-                else:
+                else:   # a long one starts under its heading and runs on; the heading needs room for a few rows
+                    for h in lead:
+                        h.keepWithNext = 0
+                    story += [CondPageBreak(150), *lead, Spacer(1, 4)] if lead else []
                     story.append(tbl)
                 story.append(Spacer(1, 12))
             elif t == "figure":
