@@ -206,6 +206,10 @@ class Trip(_Model):
     kind_note: LText | None = Field(
         None, description="Shown in parentheses after the class in the general information table only "
                           "(not on the title page), e.g. 'unclassified ski tour'.")
+    grade: str | None = Field(
+        None, description="Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. "
+                          "Useful when the trip combines several routes: give the grade of the hardest "
+                          "sections. Shown in the general information after the class.")
     participants: list[Person] = Field(default_factory=list)
     peaks: list[Peak] = Field(default_factory=list)
     route_description: LText | None = Field(

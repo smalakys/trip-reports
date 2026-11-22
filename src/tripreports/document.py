@@ -164,6 +164,8 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     rows = [[ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
     if trip.kind:
         rows.append([ui("class"), L(trip.kind) + (f" ({L(trip.kind_note)})" if trip.kind_note else "")])
+    if trip.grade:
+        rows.append([ui("grade"), trip.grade])
     rows.append([ui("region"), ", ".join(x for x in (L(trip.country), L(trip.region)) if x)])
     if trip.peaks:
         rows.append([ui("peaks"), "\n".join(

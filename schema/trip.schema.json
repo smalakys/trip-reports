@@ -978,6 +978,19 @@
       "description": "Shown in parentheses after the class in the general information table only (not on the title page), e.g. 'unclassified ski tour'.",
       "title": "Kind Note"
     },
+    "grade": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Overall grade of the whole trip as the guidebook writes grades, e.g. 'AD, III'. Useful when the trip combines several routes: give the grade of the hardest sections. Shown in the general information after the class.",
+      "title": "Grade"
+    },
     "participants": {
       "items": {
         "$ref": "#/$defs/Person"

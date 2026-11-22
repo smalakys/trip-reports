@@ -320,6 +320,15 @@ def test_peak_grades_in_general_info_and_summit_times(trip_copy):
     assert f"{data['peaks'][1]['name']} (4 105 m) –" not in text
 
 
+def test_trip_grade_in_general_info(trip_copy):
+    from tripreports.build import build_report
+
+    edit_trip(trip_copy, grade="AD+, III")
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert "Sudėtingumas AD+, III" in text
+
+
 def test_kind_note_in_general_info_only(trip_copy):
     from tripreports.build import build_report
 

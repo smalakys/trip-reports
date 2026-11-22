@@ -210,6 +210,7 @@ region: Aušros Alpės (išgalvotas rajonas)
 country: Šveicarija
 kind: Techninė klasė
 kind_note: išgalvotas žygis
+grade: AD
 
 participants:
   - name: Jonas Jonaitis
