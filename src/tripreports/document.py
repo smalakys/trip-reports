@@ -162,38 +162,55 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     # ---- route information -----------------------------------------------------------------
     h1(ui("route"), newpage=True)
     h2(ui("general"))      # the route and team at a glance: what the association reads first
-    rows = [[ui("route_name"), title]]     # the route first; the date and the team, which change, last
+    def run(t, b=False, m=False):
+        return {"t": t, "b": b, "m": m}
+
+    def bold(text):
+        return {"lines": [[run(text, b=True)]]}
+
+    # the main facts are bold, so the eye finds them among the details
+    rows = [[ui("route_name"), bold(title)]]     # the route first; the date and the team, which change, last
     if trip.kind:
-        rows.append([ui("class"), L(trip.kind) + (f" ({L(trip.kind_note)})" if trip.kind_note else "")])
+        rows.append([ui("class"), {"lines": [[run(L(trip.kind), b=True)]
+                                              + ([run(f" ({L(trip.kind_note)})")] if trip.kind_note else [])]}])
     if trip.grade:
-        rows.append([ui("grade"), trip.grade])
-    rows.append([ui("region"), ", ".join(x for x in (L(trip.country), L(trip.region)) if x)])
+        rows.append([ui("grade"), bold(trip.grade)])
+    rows.append([ui("region"), bold(", ".join(x for x in (L(trip.country), L(trip.region)) if x))])
     if trip.peaks:
-        rows.append([ui("peaks"), "\n".join(
-            f"{p.name} ({loc.metres(p.elevation_m)})"
-            + (f" – {p.grade}" if p.grade else "")
-            + ((", " if p.grade else " – ") + ui("ski_grade_inline").format(grade=p.ski_grade) if p.ski_grade else "")
-            + (", " + ui("former_name").format(name=p.former_name) if p.former_name else "")
-            for p in trip.peaks)])
+        rows.append([ui("peaks"), {"lines": [
+            [run(p.name, b=True), run(
+                f" ({loc.metres(p.elevation_m)})"
+                + (f" – {p.grade}" if p.grade else "")
+                + ((", " if p.grade else " – ") + ui("ski_grade_inline").format(grade=p.ski_grade)
+                   if p.ski_grade else "")
+                + (", " + ui("former_name").format(name=p.former_name) if p.former_name else ""))]
+            for p in trip.peaks]}])
     people = []
     for person in trip.participants:
-        name = f"{person.name} ({L(person.note)})" if person.note else person.name
-        lines = [name + (f" – {ui('leader')}" if person.leader else "")]
-        if person.bio:
-            lines.append(L(person.bio))
+        if people:
+            people.append([])                    # a gap between people
+        contact = None if person.reporter else person.contact   # the author's contact is in the footnote
+        extra = "; ".join(x for x in (L(person.note) if person.note else None, contact) if x)
+        tail = (f" ({extra})" if extra else "") + (f" – {ui('leader')}" if person.leader else "")
+        mark = [{"t": "*", "b": True, "m": False, "sup": True}] if person.reporter else []
+        people.append([run(person.name, b=True), *mark] + ([run(tail)] if tail else []))
+        if person.bio:                           # the background is grey: it supports the names
+            people.append([run(L(person.bio), m=True)])
         if person.experience:
-            lines.append(", ".join(person.experience))
-        if person.contact and not person.reporter:
-            lines.append(person.contact)
-        people.append("\n".join(lines))
-    rows.append([ui("date"), loc.date_range(trip.start_date, trip.end_date)])
+            people.append([run(", ".join(person.experience), m=True)])
+    rows.append([ui("date"), bold(loc.date_range(trip.start_date, trip.end_date))])
     if people:
-        rows.append([ui("participants"), "\n\n".join(people)])
-    for person in (p for p in trip.participants if p.reporter):
-        rows.append([ui("reporter"), ", ".join(x for x in (person.name, person.contact) if x)])
+        rows.append([ui("participants"), {"lines": people}])
     if trip.references:
         rows.append([ui("references"), "\n".join(trip.references)])
-    blocks.append(_kv_table(loc, rows))
+    general = _kv_table(loc, rows)
+    authors = [p for p in trip.participants if p.reporter]
+    if authors:       # the author is starred in the participants; the footnote gives the contact
+        a = authors[0]
+        general["after"] = [[{"t": "* " + (ui("reporter_contact").format(contact=a.contact) if a.contact
+                                            else ui("reporter")), "b": False, "i": False}]]
+        general["after_style"] = "footnote"
+    blocks.append(general)
 
     if trip.route_description:
         h2(ui("route_description"))

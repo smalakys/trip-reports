@@ -122,6 +122,8 @@ def make_styles(pal: Palette, lang: str, justify: bool) -> dict[str, ParagraphSt
     s["cell_k"] = ParagraphStyle("cell_k", parent=s["cell"], fontName=SEMI, textColor=pal.accent)
     s["cell_b"] = ParagraphStyle("cell_b", parent=s["cell"], fontName=SEMI)
     s["cell_br"] = ParagraphStyle("cell_br", parent=s["cell_b"], alignment=TA_RIGHT)
+    s["footnote"] = ParagraphStyle("footnote", parent=s["cell"], fontSize=8.5, leading=10.5,
+                                   textColor=pal.muted)                           # a note under a table
     s["cell_m"] = ParagraphStyle("cell_m", parent=s["cell"], textColor=pal.muted)        # greyed-out row
     s["cell_mk"] = ParagraphStyle("cell_mk", parent=s["cell_m"], fontName=SEMI)
     s["caption"] = ParagraphStyle("caption", parent=body, fontSize=9.5, leading=12, alignment=TA_LEFT,
@@ -259,6 +261,24 @@ def runs_markup(paras: list[list[dict]]) -> list[str]:
             parts.append(t)
         out.append("".join(parts))
     return out
+
+
+def lines_markup(lines: list[list[dict]], muted: str) -> str:
+    """Lines of runs (b = bold, m = muted grey) joined by line breaks; an empty line is a gap."""
+    out = []
+    for line in lines:
+        parts = []
+        for run in line:
+            t = escape(run["t"])
+            if run.get("b"):
+                t = f"<b>{t}</b>"
+            if run.get("sup"):
+                t = f'<super rise="3" size="7">{t}</super>'
+            if run.get("m"):
+                t = f'<font color="{muted}">{t}</font>'
+            parts.append(t)
+        out.append("".join(parts))
+    return "<br/>".join(out)
 
 
 def crop_to_fill(src: Path, dst: Path, w: float, h: float) -> Path:
@@ -492,7 +512,9 @@ class Report(BaseDocTemplate):
                 lead = []          # every heading right above the table (a section and its subsection)
                 while story and isinstance(story[-1], Heading):
                     lead.insert(0, story.pop())
-                after = [Spacer(1, 8), *[Paragraph(m, S["body"]) for m in runs_markup(b["after"])]] \
+                note_style = S["footnote"] if b.get("after_style") == "footnote" else S["body"]
+                after = [Spacer(1, 4 if b.get("after_style") == "footnote" else 8),
+                         *[Paragraph(m, note_style) for m in runs_markup(b["after"])]] \
                     if b.get("after") else []    # a note on the table, kept on the page with its end
                 if len(b["rows"]) <= 14:    # short tables never split across pages, nor from their heading
                     story.append(KeepTogether([*lead, Spacer(1, 4), tbl, *after]))
@@ -581,6 +603,8 @@ class Report(BaseDocTemplate):
                                                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                                                 ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
                         out.append(bt)
+                elif is_dict and "lines" in cell:      # key-value text with bold and grey runs
+                    out.append(Paragraph(lines_markup(cell["lines"], "#" + p.muted.hexval()[2:]), S["cell"]))
                 elif is_dict and cell.get("badge"):
                     bd = cell["badge"]
                     out.append(GradeBadge(bd["grade"], bd["system"], bd["key"], p, ski=bd.get("ski", False)))

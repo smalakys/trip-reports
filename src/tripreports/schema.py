@@ -31,12 +31,13 @@ class Person(_Model):
     experience: list[str] = Field(
         default_factory=list, description="Notable previous ascents, one per entry."
     )
-    contact: str | None = Field(None, description="Shown with the report author (see reporter).")
+    contact: str | None = Field(None, description="The report author's goes in the footnote under the general table; "
+                                                         "anyone else's in parentheses after the name.")
     note: LText | None = Field(None, description="Short note after the name, e.g. which peaks they climbed.")
     bio: LText | None = Field(None, description="A short bio: climbing background, earlier ascents.")
     leader: bool = Field(False, description="Marks the team leader in the participants row.")
-    reporter: bool = Field(False, description="The person who prepared the report; their name and contact "
-                                              "get their own row in the general information.")
+    reporter: bool = Field(False, description="The person who prepared the report: starred in the participants, "
+                                              "with their contact in a footnote.")
 
 
 class Peak(_Model):
