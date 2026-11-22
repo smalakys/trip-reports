@@ -324,9 +324,15 @@ def test_peak_grades_in_general_info_and_summit_times(trip_copy):
 def test_gpx_note_under_daily_summary(trip_copy):
     from tripreports.build import build_report
 
+    import json
+
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
     text = " ".join(_text(res.pdf).split())
     assert "matavimo paklaidų" in text
+    doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+    daily = [b for b in doc["blocks"] if b["type"] == "table" and b.get("total_row")]
+    note = " ".join(run["t"] for para in daily[0]["after"] for run in para)
+    assert "matavimo paklaidų" in note     # kept on the page with the table, not a loose paragraph
     edit_trip(trip_copy, gpx_note=False)
     res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
     assert "matavimo paklaidų" not in " ".join(_text(res.pdf).split())
