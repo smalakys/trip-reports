@@ -349,8 +349,11 @@ class Report(BaseDocTemplate):
         for t_size, s_size in ((46, 24), (40, 21), (34, 18), (30, 16), (26, 14)):
             title = Paragraph(markup(cv["title"]), ParagraphStyle(
                 "ct", fontName=DISPLAY, fontSize=t_size, leading=t_size * 1.02, textColor=p.on_inverse))
-            # break the subtitle only at its dashes, never inside a name such as "Mont Blanc"
-            sub_text = " – ".join(part.replace(" ", "\u00a0") for part in cv["subtitle"].split(" – "))
+            # a list of names ("A – B – C") breaks only at its dashes, never inside a name such as
+            # "Mont Blanc"; a plain phrase with no dashes breaks between words as usual
+            parts = cv["subtitle"].split(" – ")
+            sub_text = (" – ".join(part.replace(" ", "\u00a0") for part in parts)
+                        if len(parts) > 1 else cv["subtitle"])
             sub = Paragraph(markup(sub_text), ParagraphStyle(
                 "cs", fontName=LIGHT, fontSize=s_size, leading=s_size * 1.2, textColor=p.on_inverse)
             ) if cv["subtitle"] else None
