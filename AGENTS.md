@@ -41,7 +41,8 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
    are scaled to match. Do not override computed numbers the user has not given.
 4. Day text: use `{distance}`, `{ascent}`, `{descent}`, `{duration}`, `{hours}`, `{max_alt}`, `{min_alt}`
    for that day's figures so the diary and the tables cannot disagree. Do not end a sentence right
-   after `{hours}` with a full stop (it already ends in "val.").
+   after `{hours}` with a full stop (it already ends in "val."). Use them only where a figure belongs in
+   a sentence: no closing "Dienos duomenys: …" line, since the daily summary table already lists them.
 5. Peaks need `lat`/`lon` (copy them from the track's local maxima) so summit times are found
    automatically. Name nights through `accommodation` and long daytime stops through `breaks`;
    they label the shaded bands on the elevation profile.
@@ -78,9 +79,10 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   hairline under the header and a heavier rule at the bottom, no lines between rows, key-value tables
   without a header row.
 - Report order (follows the association's requirements and reads as a story): Maršruto informacija
-  (Bendrieji duomenys, one table: route name (the report title), date, class, grade, region, peaks,
-  participants with bios, report author with contact, sources: no separate sources section; then the
-  description, technical sections, route condition), Pasiruošimas ir logistika (acclimatisation,
+  (Bendrieji duomenys, one table: route name (the report title), class, grade, region, peaks (what
+  holds for any ascent of the route), then date and participants with bios (what this ascent was),
+  report author with contact, sources: no separate sources section; then the description, technical
+  sections, route condition), Pasiruošimas ir logistika (acclimatisation,
   tactics, gear, nights, outside support), Įkopimo eiga (weather, then the days), Įkopimo duomenys
   (summit times, daily summary, GPS note, then the map and profile page: everything recorded on the
   climb comes after the story of it), Pastabos ir rekomendacijos, Nuotraukos. A rock-class report may

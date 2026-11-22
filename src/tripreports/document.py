@@ -162,7 +162,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     # ---- route information -----------------------------------------------------------------
     h1(ui("route"), newpage=True)
     h2(ui("general"))      # the route and team at a glance: what the association reads first
-    rows = [[ui("route_name"), title], [ui("date"), loc.date_range(trip.start_date, trip.end_date)]]
+    rows = [[ui("route_name"), title]]     # the route first; the date and the team, which change, last
     if trip.kind:
         rows.append([ui("class"), L(trip.kind) + (f" ({L(trip.kind_note)})" if trip.kind_note else "")])
     if trip.grade:
@@ -186,6 +186,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         if person.contact and not person.reporter:
             lines.append(person.contact)
         people.append("\n".join(lines))
+    rows.append([ui("date"), loc.date_range(trip.start_date, trip.end_date)])
     if people:
         rows.append([ui("participants"), "\n\n".join(people)])
     for person in (p for p in trip.participants if p.reporter):
