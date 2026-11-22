@@ -320,6 +320,18 @@ def test_peak_grades_in_general_info_and_summit_times(trip_copy):
     assert f"{data['peaks'][1]['name']} (4 105 m) –" not in text
 
 
+def test_gpx_note_under_daily_summary(trip_copy):
+    from tripreports.build import build_report
+
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    text = " ".join(_text(res.pdf).split())
+    assert "įprastų GPS matavimo paklaidų" in text
+    assert ("proporcingai suderinti" in text) == ("calibration:" in (trip_copy / "trip.yaml").read_text())
+    edit_trip(trip_copy, gpx_note=False)
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert "įprastų GPS matavimo paklaidų" not in " ".join(_text(res.pdf).split())
+
+
 def test_trip_grade_in_general_info(trip_copy):
     from tripreports.build import build_report
 

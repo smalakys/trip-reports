@@ -255,6 +255,10 @@ class Trip(_Model):
         False, description="Add the climb-high-sleep-low chart (needs three or more days)."
     )
     show_contents: bool = True
+    gpx_note: bool = Field(
+        True, description="Add the standard note under the daily summary that its figures come from the "
+                          "recorded GPS track and carry the usual GPS errors (the highest point in the table "
+                          "need not match the highest summit). Mentions the calibration when one is set.")
 
     def gpx_files(self) -> list[TrackFile]:
         return [TrackFile(file=self.gpx)] if isinstance(self.gpx, str) else list(self.gpx)

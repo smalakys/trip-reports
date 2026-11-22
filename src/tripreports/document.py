@@ -382,6 +382,9 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             "image": assets.alt_chart, "ratio": assets.alt_chart_ratio,
             "source": "", "caption": "",
         })
+    if trip.gpx_note:     # after the table (and its chart): their figures come from the track
+        note = loc.fig("gpx_note") + (" " + loc.fig("gpx_note_calibrated") if trip.calibration else "")
+        blocks.append({"type": "paras", "paras": rich(note)})
 
     # ---- progress --------------------------------------------------------------------------
     if trip.days or trip.acclimatisation:
