@@ -352,6 +352,17 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             cols.insert(1, {"header": ui("grade"), "align": "left", "width": 1.3})
         if has_grade or has_ski:
             cols[0]["width"] = 1.9
+        # who reached each summit, only when not everyone reached every one
+        team = [x.name for x in trip.participants]
+        climbers = {p.name: p.climbers or team for p in trip.peaks}
+        has_climbers = any(climbers.get(p.name, team) != team for p in timed)
+        if has_climbers:
+            cols.insert(len(cols) - 2, {"header": ui("climbers"), "align": "left", "width": 2.6})
+            if has_grade or has_ski:    # a full table: make room so no header wraps
+                for c, w in zip(cols, [1.6] + [None] * (len(cols) - 5) + [1.05, 1.9, 1.3, 1.0]):
+                    c["width"] = w or c["width"]
+                if has_grade:
+                    cols[1]["width"] = 1.7
 
         def grades(name):
             p = by_name.get(name)
@@ -362,8 +373,9 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                 out.append({"badge": badge(p.ski_grade, p.ski_grade_system, ski=True)} if p and p.ski_grade else "")
             return out
 
-        rows = [[p.name] + grades(p.name)
-                + [loc.metres(p.elevation_m), loc.short_date(p.time.date()), loc.clock(p.time)]
+        rows = [[p.name] + grades(p.name) + [loc.metres(p.elevation_m)]
+                + ([", ".join(climbers.get(p.name, team))] if has_climbers else [])
+                + [loc.short_date(p.time.date()), loc.clock(p.time)]
                 for p in sorted(timed, key=lambda p: p.time)]
         blocks.append(_table(cols, rows, key_first=True))
     h2(ui("daily"))

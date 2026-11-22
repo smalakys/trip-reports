@@ -519,6 +519,22 @@
           "default": null,
           "description": "Ski grading system shown on its badge, e.g. Toponeige.",
           "title": "Ski Grade System"
+        },
+        "climbers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Participants (their names as under participants) who reached this summit. Leave it out when the whole team did. When some summit was not reached by everyone, the summit times get a column naming who reached each one.",
+          "title": "Climbers"
         }
       },
       "required": [

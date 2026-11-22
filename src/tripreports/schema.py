@@ -59,6 +59,10 @@ class Peak(_Model):
                           "Shown beside the climbing grade.")
     ski_grade_system: str | None = Field(
         None, description="Ski grading system shown on its badge, e.g. Toponeige.")
+    climbers: list[str] | None = Field(
+        None, description="Participants (their names as under participants) who reached this summit. "
+                          "Leave it out when the whole team did. When some summit was not reached by "
+                          "everyone, the summit times get a column naming who reached each one.")
 
 
 class Section(_Model):
@@ -288,6 +292,9 @@ class Trip(_Model):
         for p in self.peaks:
             if (p.lat is None) != (p.lon is None):
                 raise ValueError(f"peak {p.name!r}: give both lat and lon, or neither")
+            unknown = [n for n in p.climbers or [] if n not in {x.name for x in self.participants}]
+            if unknown:
+                raise ValueError(f"peak {p.name!r}: climbers {unknown} are not among the participants")
         return self
 
 

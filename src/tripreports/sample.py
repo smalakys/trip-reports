@@ -227,7 +227,8 @@ peaks:
   - {name: Audros ragas, elevation_m: 4168, lat: 46.54312, lon: 8.09905, grade: AD, grade_system: Alpine}
   - {name: Sidabro kalnas, elevation_m: 4010, lat: 46.55929, lon: 8.06773, grade: AD, grade_system: Alpine}
   - {name: Aušros viršūnė, elevation_m: 4231, lat: 46.56737, lon: 8.07948, grade: D−, grade_system: Alpine}
-  - {name: Vėjo dantis, elevation_m: 4087, lat: 46.57734, lon: 8.10688, grade: AD, grade_system: Alpine}
+  - {name: Vėjo dantis, elevation_m: 4087, lat: 46.57734, lon: 8.10688, grade: AD, grade_system: Alpine,
+     climbers: [Jonas Jonaitis]}
 
 route_description: >-
   Penkių dienų žygis per šešias išgalvotas viršūnes, kiekviena aukštesnė nei 3980 m. Pradėta ir
