@@ -89,8 +89,8 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 | hollow, basin | dauba | | Ž. E.g. "dauboje". |
 | plateau | plynaukštė | *ntk.* plato | Ž. E.g. "į plynaukštę". |
 | foot of a mountain, route, couloir | papėdė | | Ž. |
-| scree, talus | nuobiros; birus šlaitas | nuobirynas | Ž. E.g. "birūs šlaitai", "bira morena". |
-| loose rock ridge | bira akmenų ketera | | |
+| scree, talus | nuobiros; birus šlaitas | nuobirynas | Ž. E.g. "birūs šlaitai", "biri morena" (the adjective is birus, feminine biri; "bira" is a verb). |
+| loose rock ridge | biri akmenų ketera | | User. |
 | cairn | akmenų piramidė | bokštelis (*žod.*); *šnek.* turas | Ž. **?** |
 | summit cross, summit marker | viršūnės kryžius; viršūnės ženklas | | Ž. |
 | contour lines | horizontalės; gulstinės | | Ž. |
@@ -156,6 +156,7 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 | water ice | grynledis | vandens ledas | Ž. **?** |
 | hard / soft ice | kietas / minkštas ledas | | Ž. |
 | whiteout | baltasis rūkas | *ntk.* „whiteout“ | Ž. E.g. "baltojo rūko sąlygomis". |
+| wind chill (temperature) | jutiminė temperatūra | | User. |
 | blizzard, snowstorm | pūga | | Ž. |
 | gust | gūsis | | E.g. "vėjas gūsiais mėtė". |
 | in cloud | debesyje | | E.g. "Mont Blanc viršūnė buvo debesyje". |
@@ -361,6 +362,7 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 | satellite phone | palydovinis telefonas | | P. |
 | helicopter; helipad | sraigtasparnis; sraigtasparnių aikštelė | | |
 | summit certificate | įkopimo sertifikatas | | |
+| Snow Leopard award | Sniego leopardo apdovanojimas | | User. **?** |
 | four-, seven-thousander | keturtūkstantinė, septyntūkstantinė viršūnė | | |
 
 ## Altitude and medicine · Aukštis ir sveikata

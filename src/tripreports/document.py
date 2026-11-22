@@ -347,8 +347,10 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         blocks.append({"type": "paras", "paras": rich(L(trip.support))})
 
     # ---- progress --------------------------------------------------------------------------
-    if trip.days or trip.conditions:
+    if trip.days or trip.conditions or trip.diary_intro:
         h1(ui("progress"), newpage=True)
+        if trip.diary_intro:
+            blocks.append({"type": "paras", "paras": rich(L(trip.diary_intro))})
         if trip.conditions:     # the weather, before the days it explains
             h2(ui("conditions"))
             blocks.append({"type": "paras", "paras": rich(L(trip.conditions))})
