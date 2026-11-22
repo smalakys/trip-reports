@@ -62,6 +62,7 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 | New or changed field in the trip file | `schema.py`, then `document.py`, then `make schema` and the sample trip in `sample.py` |
 | What a section contains, table columns, wording logic | `document.py` |
 | Fixed UI wording or a new language | `assets/locales/*.toml` (keep `lt` and `en` keys identical) |
+| Lithuanian word for a climbing term | `docs/terminology-lt.md` (the glossary every Lithuanian text follows) |
 | Colours, type, spacing, radii | `assets/design/tokens.json` (the LAA design system; read `docs/design-system/`) |
 | Page margins, image resolution | `assets/theme/default.toml` |
 | Page layout, type sizes, title page, tables | `render.py` (renders the document model, contains no content) |
@@ -121,9 +122,15 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
   plural for the team, "man" where the user speaks about themself). Informative and concrete, never stiff.
 - **Never translate names.** Peaks, huts, passes, glaciers, places and routes stay in the original
   language (a peak such as Mont Blanc, a hut such as Rifugio Torino, a glacier such as Vallée Blanche). Do not decline a name by inventing a Lithuanian form.
-- Use the climbers' vocabulary: katės (crampons), ledkirtis, virvė, frendas (cam), kaištis (nut), nusileidimas virve, ketera,
-  perėja, trobelė (generic "hut"), traversas (masculine: "Karališkasis traversas", not "traversa").
-  If unsure of a term, ask the user.
+- **Terminology: look every climbing term up in [`docs/terminology-lt.md`](docs/terminology-lt.md)
+  before writing it**, in any Lithuanian text (trip files, locale strings, the sample trip). Never
+  translate a term from English yourself. Use its "Write" column; entries marked **?** are unsettled,
+  so name the ones you used in your reply. A term that is missing: ask the user, then add it to the
+  file in its group. When the user corrects a term, update the file in the same change. (Claude Code
+  loads this as the `lithuanian-terminology` skill.) The fixed choices: katės (crampons), ledkirtis,
+  virvė (also a pitch), mechaninis kaištis (cam; "frendas" is slang), kaištis (nut), nusileidimas
+  virve, ketera, perėja, trobelė (generic "hut"), traversas (masculine: "Karališkasis traversas", not
+  "traversa").
 - Reuse a participant's account only for what is common to the trip (times, places, conditions,
   hut details). Leave out what is personal to one person (their earlier summits, principles, private
   reflections). Where accounts disagree, use the more precise one and tell the user.

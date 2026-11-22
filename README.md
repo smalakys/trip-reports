@@ -132,6 +132,7 @@ src/tripreports/      the package (see table above)
 schema/               generated JSON Schema (keep current with `make schema`)
 reports/              your trips and their PDFs (git-ignored, never committed)
 tests/                unit tests and end-to-end builds of a generated sample trip
+docs/                 the design system; terminology-lt.md, the EN–LT alpinism terms report text follows
 AGENTS.md             instructions for coding agents
 ```
 

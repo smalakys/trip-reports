@@ -255,8 +255,8 @@ routes:
 tactics: Lipome susijungę virve su slenkančia sauga, techninėse vietose – su apatine sauga.
 team_gear:
   - 1 × 60 m virvė
-  - 6 × frendai
-  - 4 × ledo sraigtai
+  - 6 × mechaniniai kaiščiai
+  - 4 × ledsriegiai
 personal_gear:
   - ledkirtis
   - katės
