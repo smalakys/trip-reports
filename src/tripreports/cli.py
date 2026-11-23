@@ -17,10 +17,22 @@ def _cmd_build(args) -> int:
     for lang in langs:
         res = build_report(args.trip, lang=lang, out=args.out if len(langs) == 1 else None,
                            theme_path=args.theme,
-                           png_dir=args.png, png_ppi=args.ppi, mode=args.mode)
+                           png_dir=args.png, png_ppi=args.ppi, mode=args.mode, web=not args.no_web)
         for w in res.warnings:
             print(f"warning: {w}", file=sys.stderr)
+        if res.web_pdf:
+            print(f"wrote {res.web_pdf} ({res.web_pdf.stat().st_size / 1e6:.1f} MB, for email and the web)")
+        if res.web_error:
+            print(f"warning: no web copy written: {res.web_error}", file=sys.stderr)
         print(f"wrote {res.pdf}" + (f" and {len(res.pngs)} page images in {args.png}" if args.png else ""))
+    return 0
+
+
+def _cmd_compress(args) -> int:
+    from .compress import compress_pdf
+
+    out = compress_pdf(args.src, args.dst, ppi=args.ppi, quality=args.quality)
+    print(f"wrote {out} ({out.stat().st_size / 1e6:.1f} MB)")
     return 0
 
 
@@ -171,7 +183,16 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--mode", choices=["light", "dark"], help="colour mode (default: from the theme, light)")
     b.add_argument("--png", metavar="DIR", help="also render every page to PNG in DIR (for previewing)")
     b.add_argument("--ppi", type=int, default=70, help="resolution of the PNG previews")
+    b.add_argument("--no-web", action="store_true",
+                   help="skip the smaller report-<lang>-web.pdf copy for email and the web (needs Ghostscript)")
     b.set_defaults(fn=_cmd_build)
+
+    z = sub.add_parser("compress", help="write a smaller copy of a PDF for email and the web (Ghostscript)")
+    z.add_argument("src")
+    z.add_argument("dst", nargs="?", help="default: <src>-web.pdf")
+    z.add_argument("--ppi", type=int, default=200, help="resolution photographs are downsampled to")
+    z.add_argument("--quality", type=float, default=0.4, help="JPEG QFactor: lower is better")
+    z.set_defaults(fn=_cmd_compress)
 
     v = sub.add_parser("validate", help="check a trip folder without building")
     v.add_argument("trip")
