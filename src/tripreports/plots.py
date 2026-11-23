@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib import font_manager  # noqa: E402
 from matplotlib.font_manager import FontProperties  # noqa: E402
+from matplotlib.patches import Circle, Rectangle  # noqa: E402
 
 from .gpxstats import Track  # noqa: E402
 from .i18n import Locale  # noqa: E402
@@ -560,6 +561,27 @@ def map_view(track: Track) -> MapView:
     return MapView(x, y, keep_arr, (cx_ - half_w, cx_ + half_w), (cy_ - half_h, cy_ + half_h), ratio)
 
 
+# bright green of the start marker (as on common activity maps; not part of the palette)
+START_GREEN = "#1fae4b"
+
+
+def _clear_of(x: float, y: float, badges: list[tuple[float, float]], pt: float) -> tuple[float, float]:
+    """Move a marker so it touches, rather than covers, the markers already placed.
+
+    A marker that would overlap another is set exactly one marker width (12 pt) from it, in the
+    direction it really lies (to the right when the two coincide), so the gap is the same on every map.
+    """
+    x, y = float(x), float(y)
+    for _ in range(8):
+        near = [(math.hypot(x - ox, y - oy), ox, oy) for ox, oy in badges if math.hypot(x - ox, y - oy) < 11 * pt]
+        if not near:
+            return x, y
+        d, ox, oy = min(near)
+        ux, uy = ((x - ox) / d, (y - oy) / d) if d > 1e-9 else (1.0, 0.0)
+        x, y = ox + ux * 12 * pt, oy + uy * 12 * pt
+    return x + 12 * pt, y
+
+
 def route_map(
     track: Track,
     day_starts: list[int],
@@ -621,14 +643,33 @@ def route_map(
     pt = 2 * half_w / (width_in * 72)    # data units per point
     for n, s in enumerate(day_starts, start=1):
         bx, by = _merc(track.lat[s], track.lon[s])
-        # a day starting where another did (back at the same camp) sits beside it, not under it
-        while any(math.hypot(bx - ox, by - oy) < 11 * pt for ox, oy in badges):
-            bx += 12 * pt
-        ax.plot([bx], [by], marker="o", ms=11, mfc=c["surface-inverse"], mec=c["surface-000"],
-                mew=1.2, zorder=7)
-        ax.text(bx, by, str(n), color=c["ink-inverse"], fontproperties=fonts.tick, ha="center",
-                va="center", zorder=8)
+        bx, by = _clear_of(bx, by, badges, pt)
+        # the first day's marker is green: it is also where the route starts
+        start = n == 1
+        ax.plot([bx], [by], marker="o", ms=11, mfc=START_GREEN if start else c["surface-inverse"],
+                mec=c["surface-000"], mew=1.2, zorder=7)
+        ax.text(bx, by, str(n), color="#ffffff" if start else c["ink-inverse"], fontproperties=fonts.tick,
+                ha="center", va="center", zorder=8)
         badges.append((float(bx), float(by)))
+
+    # finish: a chequered marker where the track ends
+    fx, fy = _merc(track.lat[-1], track.lon[-1])
+    fx, fy = float(fx), float(fy)
+    fx, fy = _clear_of(fx, fy, badges, pt)
+    r = 5.5 * pt
+    disc = Circle((fx, fy), r, facecolor=c["surface-000"], edgecolor="none", zorder=7)
+    ax.add_patch(disc)
+    cells = 4
+    for i in range(cells):
+        for j in range(cells):
+            if (i + j) % 2 == 0:
+                sq = Rectangle((fx - r + i * 2 * r / cells, fy - r + j * 2 * r / cells), 2 * r / cells,
+                               2 * r / cells, facecolor=c["ink"], edgecolor="none", zorder=7.5)
+                ax.add_patch(sq)
+                sq.set_clip_path(disc)
+    ax.add_patch(Circle((fx, fy), r, facecolor="none", edgecolor=c["surface-000"], lw=1.2, zorder=7.6))
+    ax.add_patch(Circle((fx, fy), r - 0.4 * pt, facecolor="none", edgecolor=c["ink"], lw=0.6, zorder=7.7))
+    badges.append((fx, fy))
 
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()

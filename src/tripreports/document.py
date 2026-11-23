@@ -513,7 +513,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         page = theme["page"]
         page_h = page["height_mm"] - page["margin_top_mm"] - page["margin_bottom_mm"]
         heading_room = 32   # the section heading shares the first photo page
-        cap_room = 12       # caption and gap under each photo
+        cap_room = 18       # caption (up to two lines) and gap under each photo
         # Photos keep their own aspect ratio (never cropped). Landscape photos go two to a page,
         # a portrait or "full" photo gets a page of its own.
         groups: list[list] = []
