@@ -327,8 +327,8 @@ def elevation_profile(
     ax.set_xticks([mdates.date2num(c) for _, c in labelled])
     ax.set_xticklabels([loc.short_date(d) for d, _ in labelled])
     # midnight lines stop at the highest point, below the summit labels
-    ax.vlines([mdates.date2num(m) for m in midnights], lo, hi_data, color=c["line-strong"], lw=0.4,
-              zorder=2.5)
+    ax.vlines([mdates.date2num(m) for m in midnights], lo, hi_data, color=c["line"], lw=0.75,
+              zorder=0.5)
     _style_cartesian(ax, theme, fonts)
     ax.spines["bottom"].set_visible(True)
     for text, row in zip(rest_texts, strip_rows, strict=True):

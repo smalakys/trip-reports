@@ -25,6 +25,8 @@ class BuildResult:
     analysis: Analysis
     warnings: list[str] = field(default_factory=list)
     pngs: list[Path] = field(default_factory=list)
+    web_pdf: Path | None = None
+    web_error: str | None = None  # why no web copy was written (e.g. Ghostscript missing)
 
 
 def _check_files(trip: Trip, trip_dir: Path) -> None:
@@ -59,6 +61,7 @@ def build_report(
     png_ppi: int = 70,
     mode: str | None = None,
     keep_build_dir: bool = True,
+    web: bool = True,
 ) -> BuildResult:
     trip, trip_dir = load_trip(trip_dir)
     lang = lang or trip.languages[0]
@@ -151,6 +154,16 @@ def build_report(
     (build_dir / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     render_pdf(doc, out_pdf, build_dir)
 
+    web_pdf: Path | None = None
+    web_error = None
+    if web:
+        from .compress import compress_pdf
+
+        try:
+            web_pdf = compress_pdf(out_pdf)
+        except RuntimeError as e:
+            web_error = str(e)
+
     pngs: list[Path] = []
     if png_dir:
         import pypdfium2 as pdfium
@@ -167,4 +180,4 @@ def build_report(
 
     if not keep_build_dir:
         shutil.rmtree(build_dir)
-    return BuildResult(out_pdf, build_dir, an, list(an.warnings), pngs)
+    return BuildResult(out_pdf, build_dir, an, list(an.warnings), pngs, web_pdf, web_error)

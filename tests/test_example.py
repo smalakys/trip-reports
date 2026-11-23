@@ -407,3 +407,19 @@ def test_kind_note_in_general_info_only(trip_copy):
     text = " ".join(_text(res.pdf).split())
     assert "Kalnų žygių klasė (nekategorinis žygis slidėmis)" in text
     assert text.count("nekategorinis žygis slidėmis") == 1     # not on the title page pill
+
+
+def test_web_copy_is_smaller_and_keeps_the_text(built):
+    import pytest
+    from tripreports.compress import ghostscript
+
+    if ghostscript() is None:
+        pytest.skip("Ghostscript not installed")
+    import pypdfium2 as pdfium
+
+    res = built["lt"]
+    assert res.web_pdf and res.web_pdf.name == "report-lt-web.pdf"
+    assert res.web_pdf.stat().st_size < res.pdf.stat().st_size
+    full, web = pdfium.PdfDocument(str(res.pdf)), pdfium.PdfDocument(str(res.web_pdf))
+    assert len(web) == len(full)
+    assert web[0].get_textpage().get_text_range() == full[0].get_textpage().get_text_range()

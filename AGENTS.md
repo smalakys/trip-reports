@@ -15,6 +15,8 @@ make setup                      # once: .venv + editable install
 .venv/bin/tripreport build <trip-dir> --lang lt --png /tmp/pages --ppi 80
 .venv/bin/tripreport clean-gpx in.gpx out.gpx    # strip heart rate etc. (always do this for a new GPX)
 .venv/bin/tripreport merge-gpx d1.gpx d2.gpx out.gpx --keep <trip-dir>/gpx-days   # daily files: clean, keep, merge
+# `build` also writes out/report-<lang>-web.pdf (Ghostscript, photos at 200 ppi): the copy to email and
+# put on the web; the full-quality report-<lang>.pdf is the one to print and archive. `--no-web` skips it.
 make test                       # must pass before you finish (works offline)
 make schema                     # after changing src/tripreports/schema.py
 make sample                     # fictional sample trip in reports/sample (git-ignored) to look at

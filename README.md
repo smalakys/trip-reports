@@ -36,8 +36,10 @@ tripreport clean-gpx in.gpx reports/my-climb/track.gpx --every 1   # keep positi
 tripreport merge-gpx day1.gpx day2.gpx reports/my-climb/track.gpx --keep reports/my-climb/gpx-days
                                                     # clean daily files, keep them, join them in time order
 tripreport validate reports/my-climb                # check the file, referenced files and the track
-tripreport build reports/my-climb --lang lt         # PDF in reports/my-climb/out/
+tripreport build reports/my-climb --lang lt         # full-quality PDF in reports/my-climb/out/ plus report-lt-web.pdf,
+                                                    # a much smaller copy for email and the web (needs Ghostscript)
 tripreport build reports/my-climb --png /tmp/pages  # also render every page to PNG for a quick look
+tripreport compress in.pdf [out.pdf]                # make such a copy of any PDF
 tripreport schema                                   # JSON Schema of trip.yaml
 ```
 
