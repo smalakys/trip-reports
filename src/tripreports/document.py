@@ -199,8 +199,7 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         contact = None if person.reporter else person.contact   # the author's contact is in the footnote
         extra = "; ".join(x for x in (L(person.note) if person.note else None, contact) if x)
         tail = (f" ({extra})" if extra else "") + (f" – {ui('leader')}" if person.leader else "")
-        mark = [{"t": "*", "b": True, "m": False, "sup": True}] if person.reporter else []
-        people.append([run(person.name, b=True), *mark] + ([run(tail)] if tail else []))
+        people.append([run(person.name, b=True)] + ([run(tail)] if tail else []))
         if person.bio:                           # the background is grey: it supports the names
             people.append([run(L(person.bio), m=True)])
         if person.experience:
@@ -212,9 +211,9 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
         rows.append([ui("references"), "\n".join(trip.references)])
     general = _kv_table(loc, rows)
     authors = [p for p in trip.participants if p.reporter]
-    if authors:       # the author is starred in the participants; the footnote gives the contact
+    if authors:       # the author's contact goes in a footnote under the table
         a = authors[0]
-        general["after"] = [[{"t": "* " + (ui("reporter_contact").format(contact=a.contact) if a.contact
+        general["after"] = [[{"t": (ui("reporter_contact").format(contact=a.contact) if a.contact
                                             else ui("reporter")), "b": False, "i": False}]]
         general["after_style"] = "footnote"
     blocks.append(general)

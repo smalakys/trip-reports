@@ -618,7 +618,7 @@
         },
         "reporter": {
           "default": false,
-          "description": "The person who prepared the report: starred in the participants, with their contact in a footnote.",
+          "description": "The person who prepared the report: their contact is given in a note under the table.",
           "title": "Reporter",
           "type": "boolean"
         }

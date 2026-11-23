@@ -82,7 +82,7 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 - Report order (follows the association's requirements and reads as a story): Maršruto informacija
   (Bendrieji duomenys, one table: route name (the report title), class, grade, region, peaks (what
   holds for any ascent of the route), then date and participants with bios (what this ascent was;
-  the author's name starred, their contact in a small footnote under the table, no author row;
+  the author's contact in a small footnote under the table, no author row;
   names, route, region, class, grade, dates and peak names bold, the climbing lists grey), sources: no
   separate sources section; then the description, technical
   sections, route condition), Pasiruošimas ir logistika (acclimatisation,
