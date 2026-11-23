@@ -36,8 +36,8 @@ class Person(_Model):
     note: LText | None = Field(None, description="Short note after the name, e.g. which peaks they climbed.")
     bio: LText | None = Field(None, description="A short bio: climbing background, earlier ascents.")
     leader: bool = Field(False, description="Marks the team leader in the participants row.")
-    reporter: bool = Field(False, description="The person who prepared the report: starred in the participants, "
-                                              "with their contact in a footnote.")
+    reporter: bool = Field(False, description="The person who prepared the report: their contact is "
+                                              "given in a note under the table.")
 
 
 class Peak(_Model):
