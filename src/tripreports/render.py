@@ -100,8 +100,21 @@ def palette(theme: dict) -> Palette:
     )
 
 
+def _hyphenator(lang: str):
+    """Hyphenation callable that leaves capitalised words (place and peak names) whole."""
+    import pyphen
+
+    iterate = pyphen.Pyphen(lang=lang).iterate
+
+    def hyphenate(word: str):
+        return iter(()) if word[:1].isupper() else iterate(word)
+
+    return hyphenate
+
+
 def make_styles(pal: Palette, lang: str, justify: bool) -> dict[str, ParagraphStyle]:
-    hyph = {"lt": "lt", "en": "en_GB"}.get(lang)
+    code = {"lt": "lt", "en": "en_GB"}.get(lang)
+    hyph = _hyphenator(code) if code else None
     base = dict(fontName=BODY, textColor=pal.ink, hyphenationLang=hyph, allowWidows=0, allowOrphans=0,
                 splitLongWords=1)
     body = ParagraphStyle("body", fontSize=10, leading=13.6, alignment=TA_JUSTIFY if justify else TA_LEFT,
