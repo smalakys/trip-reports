@@ -77,7 +77,7 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 | shoulder | petys | | Ž. |
 | spur | atšaka | | Ž. |
 | buttress | kontraforsas | | Ž. |
-| face, wall | siena | | Ž: steeper than about 60°. "Šiaurės siena". |
+| face, wall | siena | | Ž: steeper than about 60°. A face by compass side takes the adjective: "šiaurinė siena" (not "Šiaurės siena"), corrected by the user. |
 | slope | šlaitas | | Ž. |
 | couloir, gully | kuluaras | | Ž. |
 | step in a ridge | laiptas; a small one: laiptelis | | Ž. E.g. "uolų laiptas", "ledo laiptelis". |

@@ -351,6 +351,109 @@
       "title": "Day",
       "type": "object"
     },
+    "MapDetail": {
+      "additionalProperties": false,
+      "description": "A second, zoomed-in map under the route map and profile: the same track over a smaller window,\nto show the important part (a traverse, the couloirs) that is too small on the whole-route map.\nGive the window either as an altitude (``above_m``: the part of the track above it) or as\n``bounds``.",
+      "properties": {
+        "above_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Zoom on the part of the track above this altitude, m.",
+          "title": "Above M"
+        },
+        "bounds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Window as [south, west, north, east] in decimal degrees (instead of above_m).",
+          "title": "Bounds"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Headline above the map: say what it shows.",
+          "title": "Title"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        }
+      },
+      "title": "MapDetail",
+      "type": "object"
+    },
+    "MapOverview": {
+      "additionalProperties": false,
+      "description": "Map and elevation profile of the whole outing (every GPX file together), placed before the\nfigures of the individual tracks. Needs several GPX files.",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading above the overview map and profile.",
+          "title": "Name"
+        }
+      },
+      "title": "MapOverview",
+      "type": "object"
+    },
     "MapSettings": {
       "additionalProperties": false,
       "properties": {
@@ -387,6 +490,30 @@
           "default": true,
           "title": "Label Peaks",
           "type": "boolean"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MapDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional zoomed-in map of the important part."
+        },
+        "overview": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MapOverview"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional map and profile of all GPX files together, before the per-file figures."
         }
       },
       "title": "MapSettings",
@@ -834,6 +961,47 @@
         "name"
       ],
       "title": "Section",
+      "type": "object"
+    },
+    "Topo": {
+      "additionalProperties": false,
+      "description": "A route diagram (topo) shown under the table of route sections, in the order given.",
+      "properties": {
+        "file": {
+          "description": "Path relative to the trip folder.",
+          "title": "File",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Caption"
+        },
+        "size": {
+          "default": "half",
+          "description": "'full' = almost a page tall (a tall diagram); 'half' = small, two to a page.",
+          "enum": [
+            "full",
+            "half"
+          ],
+          "title": "Size",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "caption"
+      ],
+      "title": "Topo",
       "type": "object"
     },
     "TrackFile": {
@@ -1389,6 +1557,14 @@
         "$ref": "#/$defs/Photo"
       },
       "title": "Photos",
+      "type": "array"
+    },
+    "route_topos": {
+      "description": "Route diagrams under the route sections table.",
+      "items": {
+        "$ref": "#/$defs/Topo"
+      },
+      "title": "Route Topos",
       "type": "array"
     },
     "references": {

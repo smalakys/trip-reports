@@ -218,6 +218,16 @@ def test_several_track_files_get_a_map_and_profile_each(trip_copy):
     assert len(res.analysis.days) == 5 and [len(g.day_start_idx) for g in res.analysis.groups] == [2]
     assert not (res.build_dir / "assets" / "route-map-2.svg").exists()
 
+    # map.overview puts a map and profile of all the files together in front of the per-file figures
+    edit_trip(trip_copy, gpx=[{"file": "a.gpx", "name": "Pirmoji dalis"}, {"file": "b.gpx", "name": "Antroji dalis"}],
+              map={"basemap": "plain", "overview": {"name": "Visa išvyka"}})
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert res.warnings == []
+    assets = {p.name for p in (res.build_dir / "assets").glob("*.svg")}
+    assert {"route-map-overview.svg", "elevation-profile-overview.svg", "route-map-1.svg"} <= assets
+    text = _text(res.pdf)
+    assert text.index("Visa išvyka") < text.index("Pirmoji dalis") < text.index("Antroji dalis")
+
 
 def test_nights_table_is_grouped_with_an_intro(trip_copy):
     import yaml
@@ -423,3 +433,48 @@ def test_web_copy_is_smaller_and_keeps_the_text(built):
     full, web = pdfium.PdfDocument(str(res.pdf)), pdfium.PdfDocument(str(res.web_pdf))
     assert len(web) == len(full)
     assert web[0].get_textpage().get_text_range() == full[0].get_textpage().get_text_range()
+
+
+def test_detail_map_zooms_in_on_part_of_the_track(trip_copy):
+    from tripreports import plots
+    from tripreports.analysis import analyse
+    from tripreports.build import build_report
+    from tripreports.schema import load_trip
+
+    edit_trip(trip_copy, map={"basemap": "plain", "detail": {"above_m": 3500, "title": "Perėja iš arti"}})
+    trip, _ = load_trip(trip_copy)
+    track = analyse(trip, trip_copy).track
+    whole, zoom = plots.map_view(track), plots.detail_view(track, above_m=3500)
+    assert zoom.xlim[1] - zoom.xlim[0] < 0.8 * (whole.xlim[1] - whole.xlim[0])   # a smaller window
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    assert (res.build_dir / "assets" / "route-map-detail.svg").exists()
+    assert "Perėja iš arti" in _text(res.pdf)
+    with pytest.raises(ValueError):
+        plots.detail_view(track, above_m=9000)
+
+
+def test_detail_map_needs_exactly_one_window(trip_copy):
+    from pydantic import ValidationError
+
+    from tripreports.schema import MapDetail
+
+    with pytest.raises(ValidationError):
+        MapDetail()
+    with pytest.raises(ValidationError):
+        MapDetail(above_m=3000, bounds=[1, 2, 3, 4])
+
+
+def test_route_topos_go_under_the_route_sections_table(trip_copy):
+    import shutil
+
+    from tripreports.build import build_report
+
+    shutil.copy(trip_copy / "photos" / "cover.jpg", trip_copy / "photos" / "topo.jpg")
+    edit_trip(trip_copy, route_topos=[{"file": "photos/topo.jpg", "caption": "Schemos parašas"}])
+    res = build_report(trip_copy, lang="lt", out=trip_copy / "r.pdf")
+    doc = json.loads((res.build_dir / "data.json").read_text(encoding="utf-8"))
+    kinds = [b["type"] for b in doc["blocks"]]
+    table = max(i for i, b in enumerate(doc["blocks"]) if b["type"] == "table"
+                and b["columns"][0]["header"] == "Atkarpa")
+    assert kinds[table + 1] == "topos"
+    assert "Schemos parašas" in _text(res.pdf)
