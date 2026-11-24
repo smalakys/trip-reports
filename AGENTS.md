@@ -16,7 +16,8 @@ make setup                      # once: .venv + editable install
 .venv/bin/tripreport clean-gpx in.gpx out.gpx    # strip heart rate etc. (always do this for a new GPX)
 .venv/bin/tripreport merge-gpx d1.gpx d2.gpx out.gpx --keep <trip-dir>/gpx-days   # daily files: clean, keep, merge
 # `build` also writes out/report-<lang>-web.pdf (Ghostscript, photos at 200 ppi): the copy to email and
-# put on the web; the full-quality report-<lang>.pdf is the one to print and archive. `--no-web` skips it.
+# put on the web; the full-quality report-<lang>.pdf is the one to print and archive. Always deliver
+# both: `--no-web` is for throw-away experiments only (see the `building-reports` skill).
 make test                       # must pass before you finish (works offline)
 make schema                     # after changing src/tripreports/schema.py
 make sample                     # fictional sample trip in reports/sample (git-ignored) to look at
@@ -51,6 +52,13 @@ minute). ReportLab renders the PDF and matplotlib draws the figures; fonts are b
 6. Map: `map.basemap: tiles` puts OpenTopoMap under the route. The first build downloads the tiles and
    caches them as `basemap.jpg` + `basemap.json` in the trip folder (commit both; tests and later builds
    are then offline). Delete them to refetch. The map credit line is the only source line in the report.
+   `map.detail` (`above_m: 3400` or `bounds: [S, W, N, E]`, plus a `title` that says what it shows) adds a
+   second, zoomed-in map under the map and profile, with its own tile cache `basemap-detail.jpg/json`;
+   use it when the important part of the route is too small on the whole-route map.
+   `map.overview` (with an optional `name`) puts a map and profile of all GPX files together before the
+   per-file figures (several files only); its tiles are cached as `basemap-overview.jpg/json`.
+   Photos and route topos: follow the `adding-photos` skill (`.claude/skills/adding-photos`). Every photo
+   caption ends with "(Author, YYYY-MM-DD)", a topo's with its source in brackets; never guess the author.
 7. `tripreport validate`, then `build --png <dir>`. **Look at the page PNGs** (the Read tool shows
    images) before reporting success: cover (long titles and subtitles must not collide), tables, the
    page with the map and profile (they must share one page), diary pages, photo pages, no orphaned

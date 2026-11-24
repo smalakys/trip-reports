@@ -49,12 +49,17 @@ class Assets:
     profile: str
     profile_ratio: float
     route_map_under: str | None = None     # basemap image drawn beneath the vector route map
+    detail: str | None = None              # zoomed-in map under the first map and profile
+    detail_ratio: float = 0.0
+    detail_under: str | None = None
     map_attribution: str | None = None
     acc: str | None = None
     acc_ratio: float = 0.0
     acc_delta_m: float = 0.0
     photos: list[tuple[str, tuple[int, int]]] = field(default_factory=list)
+    topos: list[tuple[str, tuple[int, int]]] = field(default_factory=list)
     groups: list[GroupFigures] = field(default_factory=list)   # one map and profile per figure group
+    overview: GroupFigures | None = None    # map and profile of all tracks together, before the groups
     alt_chart: str | None = None        # expedition altitude chart (trips with a base camp)
     alt_chart_ratio: float = 0.0
 
@@ -68,6 +73,9 @@ class GroupFigures:
     profile: str
     profile_ratio: float
     route_map_under: str | None = None
+    detail: str | None = None              # zoomed-in map of the important part (``map.detail``)
+    detail_ratio: float = 0.0
+    detail_under: str | None = None
 
 
 def _table(columns, rows, **extra):
@@ -264,6 +272,16 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
                     row.append(L(s.note))
                 trows.append(row)
         blocks.append(_table(cols, trows, key_first=True))
+        if trip.route_topos:     # the route diagrams, in order, under the table
+            tw = text_width_mm(theme)
+            page = theme["page"]
+            page_h = page["height_mm"] - page["margin_top_mm"] - page["margin_bottom_mm"]
+            # tallest a diagram may be: "full" nearly fills a page (room kept for its caption), "half" lets
+            # two share a page with the text after them; the diagram keeps its proportions, never cropped
+            heights = {"full": page_h - 30, "half": 75}
+            blocks.append({"type": "topos", "items": [
+                {"image": path, "w_mm": round(min(tw, heights[tp.size] * pw / ph), 2), "caption": L(tp.caption)}
+                for tp, (path, (pw, ph)) in zip(trip.route_topos, assets.topos, strict=True)]})
 
     if trip.route_conditions:
         h2(ui("route_conditions"))
@@ -474,7 +492,8 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
     # the map and the profile, after the tables: they show the same recorded track
     source_map = ui("source_tiles").format(attribution=assets.map_attribution) if assets.map_attribution else ""
 
-    def map_and_profile(route_map, under, map_ratio, profile, profile_ratio, distance_m, ascent_m, days):
+    def map_and_profile(route_map, under, map_ratio, profile, profile_ratio, distance_m, ascent_m, days,
+                        detail=None, detail_under=None, detail_ratio=0.0):
         days_txt = loc.fig("single_day") if days == 1 else loc.days(days)
         return [{
             "type": "figure",
@@ -488,18 +507,32 @@ def build_document(trip: Trip, an: Analysis, assets: Assets, theme: dict, lang: 
             "subtitle": loc.fig("profile_subtitle"),
             "image": profile, "ratio": profile_ratio,
             "source": "", "caption": "",
-        }]
+        }] + ([{
+            "type": "figure",
+            "headline": L(trip.map.detail.title) if trip.map.detail.title else loc.fig("detail_title"),
+            "subtitle": L(trip.map.detail.subtitle) if trip.map.detail.subtitle else loc.fig("detail_subtitle"),
+            "image": detail, "under": detail_under, "ratio": detail_ratio,
+            "source": "", "caption": "",
+        }] if detail else [])
 
     if an.groups:
+        if assets.overview is not None:    # the whole outing first, then each track on a page of its own
+            o = assets.overview
+            blocks.append({"type": "figure_group",
+                           "title": L(trip.map.overview.name) if trip.map.overview.name else ui("overview_maps"),
+                           "newpage": False,
+                           "figures": map_and_profile(o.route_map, o.route_map_under, o.route_map_ratio, o.profile,
+                                                      o.profile_ratio, t["distance_m"], t["ascent_m"], n_days)})
         for g, f in zip(an.groups, assets.groups, strict=True):
-            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": False,
+            blocks.append({"type": "figure_group", "title": L(g.name), "newpage": assets.overview is not None,
                            "figures": map_and_profile(f.route_map, f.route_map_under, f.route_map_ratio,
                                                       f.profile, f.profile_ratio, g.distance_m, g.ascent_m,
-                                                      g.n_days)})
+                                                      g.n_days, f.detail, f.detail_under, f.detail_ratio)})
     else:     # the map and the profile share one page, under their own heading
         blocks.append({"type": "figure_group", "title": ui("route_maps"), "newpage": False,
                        "figures": map_and_profile(assets.route_map, assets.route_map_under, assets.route_map_ratio,
-                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days)})
+                                  assets.profile, assets.profile_ratio, t["distance_m"], t["ascent_m"], n_days,
+                                  assets.detail, assets.detail_under, assets.detail_ratio)})
 
     # ---- remarks and recommendations -------------------------------------------------------
     if trip.recommendations:

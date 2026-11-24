@@ -37,7 +37,7 @@ def merc_to_lonlat(x: float, y: float) -> tuple[float, float]:
     return lon, lat
 
 
-def _fetch(extent, source: str, zoom: int | None) -> Basemap:
+def _fetch(extent, source: str, zoom: int | None, max_zoom: int = 16) -> Basemap:
     import contextily as cx
 
     name, attribution = SOURCES[source]
@@ -48,7 +48,7 @@ def _fetch(extent, source: str, zoom: int | None) -> Basemap:
     west, south = merc_to_lonlat(xmin, ymin)
     east, north = merc_to_lonlat(xmax, ymax)
     if zoom is None:   # about 3000 px across the view: 256 px tiles, 2**zoom tiles around 40 075 017 m
-        zoom = max(1, min(16, round(math.log2(3000 * 40_075_016.7 / (256 * (xmax - xmin))))))
+        zoom = max(1, min(max_zoom, round(math.log2(3000 * 40_075_016.7 / (256 * (xmax - xmin))))))
     img, ext = cx.bounds2img(west, south, east, north, zoom=zoom, source=provider, ll=True)
     return Basemap(Image.fromarray(img[..., :3]), (ext[0], ext[1], ext[2], ext[3]), attribution)
 
@@ -69,18 +69,20 @@ def _trim(bm: Basemap, extent: tuple[float, float, float, float], max_px: int) -
 
 
 def load_basemap(trip_dir: Path, extent: tuple[float, float, float, float], source: str = "topo",
-                 zoom: int | None = None) -> Basemap:
-    """Return the cached basemap for the trip, fetching and caching it on first use."""
+                 zoom: int | None = None, name: str = "basemap", max_zoom: int = 16) -> Basemap:
+    """Return the cached basemap for the trip, fetching and caching it on first use.
+
+    ``name`` picks the cache files (``<name>.jpg`` and ``<name>.json``): a zoomed-in map has its own."""
     if source not in SOURCES:
         raise ValueError(f"unknown tile source {source!r}; choose from {sorted(SOURCES)}")
-    jpg, meta = trip_dir / "basemap.jpg", trip_dir / "basemap.json"
+    jpg, meta = trip_dir / f"{name}.jpg", trip_dir / f"{name}.json"
     if jpg.exists() and meta.exists():
         m = json.loads(meta.read_text(encoding="utf-8"))
         xmin, xmax, ymin, ymax = m["extent"]
         need = extent
         if xmin <= need[0] and need[1] <= xmax and ymin <= need[2] and need[3] <= ymax and m["source"] == source:
             return Basemap(Image.open(jpg).convert("RGB"), tuple(m["extent"]), m["attribution"])
-    bm = _fetch(extent, source, zoom)
+    bm = _fetch(extent, source, zoom, max_zoom)
     bm = _trim(bm, extent, max_px=2600)
     bm.image.save(jpg, quality=82, optimize=True)
     meta.write_text(json.dumps({"source": source, "extent": list(bm.extent), "attribution": bm.attribution},

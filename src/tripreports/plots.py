@@ -561,6 +561,30 @@ def map_view(track: Track) -> MapView:
     return MapView(x, y, keep_arr, (cx_ - half_w, cx_ + half_w), (cy_ - half_h, cy_ + half_h), ratio)
 
 
+def detail_view(track: Track, above_m: float | None = None, bounds: list[float] | None = None,
+                ratio: float = 0.55) -> MapView:
+    """A window on part of the track: where it is above ``above_m``, or the ``bounds`` box
+    [south, west, north, east]. The whole track is still drawn; what lies outside is cropped."""
+    full = map_view(track)
+    if bounds is not None:
+        (x0, x1), (y0, y1) = _merc([bounds[0], bounds[2]], [bounds[1], bounds[3]])
+        x0, x1 = sorted((x0, x1))
+        y0, y1 = sorted((y0, y1))
+        pad = 0.0
+    else:
+        inside = track.ele[full.keep] >= above_m
+        if not inside.any():
+            raise ValueError(f"map.detail: the track never rises above {above_m:g} m")
+        x0, x1, y0, y1 = full.x[inside].min(), full.x[inside].max(), full.y[inside].min(), full.y[inside].max()
+        pad = 0.12
+    dx, dy = max(x1 - x0, 300), max(y1 - y0, 300)
+    cx_, cy_ = (x0 + x1) / 2, (y0 + y1) / 2
+    half_w = dx * (0.5 + pad)
+    half_h = max(dy * (0.5 + pad), half_w * ratio)
+    half_w = max(half_w, half_h / ratio)
+    return MapView(full.x, full.y, full.keep, (cx_ - half_w, cx_ + half_w), (cy_ - half_h, cy_ + half_h), ratio)
+
+
 # bright green of the start marker (as on common activity maps; not part of the palette)
 START_GREEN = "#1fae4b"
 
@@ -593,6 +617,7 @@ def route_map(
     label_peaks: bool = True,
     base_image=None,
     base_out: Path | None = None,
+    view: MapView | None = None,
 ) -> float:
     """Route on a map; returns height/width ratio of the figure.
 
@@ -603,7 +628,7 @@ def route_map(
     fonts = setup_style(theme)
     c = theme["colors"]
     width_in = text_width_mm(theme) * MM
-    view = map_view(track)
+    view = view or map_view(track)
     keep_arr, x, y, ratio = view.keep, view.x, view.y, view.ratio
     cx_, cy_ = sum(view.xlim) / 2, sum(view.ylim) / 2
     half_w, half_h = (view.xlim[1] - view.xlim[0]) / 2, (view.ylim[1] - view.ylim[0]) / 2
@@ -641,8 +666,14 @@ def route_map(
 
     badges = []
     pt = 2 * half_w / (width_in * 72)    # data units per point
+
+    def shown(px, py) -> bool:    # a zoomed-in map crops the track: markers outside the window are left out
+        return view.xlim[0] <= px <= view.xlim[1] and view.ylim[0] <= py <= view.ylim[1]
+
     for n, s in enumerate(day_starts, start=1):
         bx, by = _merc(track.lat[s], track.lon[s])
+        if not shown(bx, by):
+            continue
         bx, by = _clear_of(bx, by, badges, pt)
         # the first day's marker is green: it is also where the route starts
         start = n == 1
@@ -654,22 +685,22 @@ def route_map(
 
     # finish: a chequered marker where the track ends
     fx, fy = _merc(track.lat[-1], track.lon[-1])
-    fx, fy = float(fx), float(fy)
-    fx, fy = _clear_of(fx, fy, badges, pt)
-    r = 5.5 * pt
-    disc = Circle((fx, fy), r, facecolor=c["surface-000"], edgecolor="none", zorder=7)
-    ax.add_patch(disc)
-    cells = 4
-    for i in range(cells):
-        for j in range(cells):
-            if (i + j) % 2 == 0:
-                sq = Rectangle((fx - r + i * 2 * r / cells, fy - r + j * 2 * r / cells), 2 * r / cells,
-                               2 * r / cells, facecolor=c["ink"], edgecolor="none", zorder=7.5)
-                ax.add_patch(sq)
-                sq.set_clip_path(disc)
-    ax.add_patch(Circle((fx, fy), r, facecolor="none", edgecolor=c["surface-000"], lw=1.2, zorder=7.6))
-    ax.add_patch(Circle((fx, fy), r - 0.4 * pt, facecolor="none", edgecolor=c["ink"], lw=0.6, zorder=7.7))
-    badges.append((fx, fy))
+    if shown(fx, fy):
+        fx, fy = _clear_of(float(fx), float(fy), badges, pt)
+        r = 5.5 * pt
+        disc = Circle((fx, fy), r, facecolor=c["surface-000"], edgecolor="none", zorder=7)
+        ax.add_patch(disc)
+        cells = 4
+        for i in range(cells):
+            for j in range(cells):
+                if (i + j) % 2 == 0:
+                    sq = Rectangle((fx - r + i * 2 * r / cells, fy - r + j * 2 * r / cells), 2 * r / cells,
+                                   2 * r / cells, facecolor=c["ink"], edgecolor="none", zorder=7.5)
+                    ax.add_patch(sq)
+                    sq.set_clip_path(disc)
+        ax.add_patch(Circle((fx, fy), r, facecolor="none", edgecolor=c["surface-000"], lw=1.2, zorder=7.6))
+        ax.add_patch(Circle((fx, fy), r - 0.4 * pt, facecolor="none", edgecolor=c["ink"], lw=0.6, zorder=7.7))
+        badges.append((fx, fy))
 
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
@@ -688,7 +719,7 @@ def route_map(
 
     dots = {}
     for p in peaks:   # keep every summit dot clear of the other summits' labels
-        if p.lat is not None and p.lon is not None:
+        if p.lat is not None and p.lon is not None and shown(*_merc(p.lat, p.lon)):
             px, py = ax.transData.transform(_merc(p.lat, p.lon))
             dots[p.name] = (px, py)
             occupied.append((px - 4, py - 4, px + 4, py + 4))
@@ -700,7 +731,7 @@ def route_map(
         return min(gaps, default=math.inf)
 
     for p in peaks:
-        if p.lat is None or p.lon is None:
+        if p.lat is None or p.lon is None or not shown(*_merc(p.lat, p.lon)):
             continue
         px_, py_ = _merc(p.lat, p.lon)
         ax.plot([px_], [py_], marker="o", ms=6 * PX * 1.2, mfc=c["surface-000"], mec=c["ink"],

@@ -563,6 +563,9 @@ class Report(BaseDocTemplate):
                 story.append(toc)
             elif t == "photo_pages":
                 story += self.photo_pages(b)
+            elif t == "topos":      # route diagrams: picture and caption kept together, centred
+                for it in b["items"]:
+                    story.append(self.picture(it))
         return story
 
     # ---- tables ----------------------------------------------------------------------------
@@ -667,6 +670,16 @@ class Report(BaseDocTemplate):
             parts.append(Paragraph(markup(b["caption"]), S["caption"]))
         parts.append(Spacer(1, 14))
         return parts
+
+    def picture(self, it: dict) -> KeepTogether:
+        """An image at its own aspect ratio, centred, with its caption under it."""
+        src = self.build_dir / it["image"]
+        w = it["w_mm"] * mm
+        with PILImage.open(src) as im:
+            h = w * im.size[1] / im.size[0]
+        return KeepTogether([Spacer(1, 6), Image(str(src), width=w, height=h, hAlign="CENTER"),
+                             Paragraph("<br/>".join(markup(line) for line in it["caption"].split("\n")),
+                                       self.styles["photo_caption"]), Spacer(1, 12)])
 
     def photo_pages(self, b: dict) -> list:
         out: list = []

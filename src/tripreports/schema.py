@@ -160,6 +160,15 @@ class Photo(_Model):
     )
 
 
+class Topo(_Model):
+    """A route diagram (topo) shown under the table of route sections, in the order given."""
+
+    file: str = Field(description="Path relative to the trip folder.")
+    caption: LText
+    size: Literal["full", "half"] = Field(
+        "half", description="'full' = almost a page tall (a tall diagram); 'half' = small, two to a page.")
+
+
 class Calibration(_Model):
     """Totals to trust over the ones computed from the GPX track.
 
@@ -175,6 +184,33 @@ class Calibration(_Model):
     )
 
 
+class MapDetail(_Model):
+    """A second, zoomed-in map under the route map and profile: the same track over a smaller window,
+    to show the important part (a traverse, the couloirs) that is too small on the whole-route map.
+    Give the window either as an altitude (``above_m``: the part of the track above it) or as
+    ``bounds``."""
+
+    above_m: float | None = Field(None, description="Zoom on the part of the track above this altitude, m.")
+    bounds: list[float] | None = Field(
+        None, min_length=4, max_length=4,
+        description="Window as [south, west, north, east] in decimal degrees (instead of above_m).")
+    title: LText | None = Field(None, description="Headline above the map: say what it shows.")
+    subtitle: LText | None = None
+
+    @model_validator(mode="after")
+    def _one_window(self):
+        if (self.above_m is None) == (self.bounds is None):
+            raise ValueError("map.detail: give exactly one of above_m or bounds")
+        return self
+
+
+class MapOverview(_Model):
+    """Map and elevation profile of the whole outing (every GPX file together), placed before the
+    figures of the individual tracks. Needs several GPX files."""
+
+    name: LText | None = Field(None, description="Heading above the overview map and profile.")
+
+
 class MapSettings(_Model):
     basemap: Literal["plain", "tiles"] = Field(
         "plain",
@@ -186,6 +222,9 @@ class MapSettings(_Model):
     )
     color_by: Literal["none", "day"] = "none"
     label_peaks: bool = True
+    detail: MapDetail | None = Field(None, description="Optional zoomed-in map of the important part.")
+    overview: MapOverview | None = Field(
+        None, description="Optional map and profile of all GPX files together, before the per-file figures.")
 
 
 CoverStat = Literal["highest_point", "ascent", "descent", "distance", "peaks", "days", "net_time",
@@ -274,6 +313,7 @@ class Trip(_Model):
     )
     map: MapSettings = Field(default_factory=MapSettings)
     photos: list[Photo] = Field(default_factory=list)
+    route_topos: list[Topo] = Field(default_factory=list, description="Route diagrams under the route sections table.")
     references: list[str] = Field(
         default_factory=list, description="Guidebooks and other sources, shown in the general information.")
     calibration: Calibration | None = None

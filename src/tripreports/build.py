@@ -30,7 +30,8 @@ class BuildResult:
 
 
 def _check_files(trip: Trip, trip_dir: Path) -> None:
-    missing = [p for p in [*(f.file for f in trip.gpx_files()), trip.cover.image, *(ph.file for ph in trip.photos)]
+    missing = [p for p in [*(f.file for f in trip.gpx_files()), trip.cover.image, *(ph.file for ph in trip.photos),
+                                                                 *(tp.file for tp in trip.route_topos)]
                if not (trip_dir / p).exists()]
     if missing:
         raise FileNotFoundError("files listed in the trip file are missing: " + ", ".join(missing))
@@ -87,6 +88,12 @@ def build_report(
                            img["jpeg_quality"])
         photos.append((f"assets/{name}", px))
 
+    topos = []
+    for i, tp in enumerate(trip.route_topos, start=1):
+        name = f"topo-{i:02d}.jpg"
+        px = prepare_image(trip_dir / tp.file, assets_dir / name, img["photo_long_edge_px"], img["jpeg_quality"])
+        topos.append((f"assets/{name}", px))
+
     # analysis and figures
     an = analyse(trip, trip_dir)
     loc = Locale(lang)
@@ -107,6 +114,22 @@ def build_report(
             map_note = basemap.attribution
         except Exception as exc:  # no network, tiles blocked, missing [tiles] extra ...
             an.warnings.append(f"map tiles unavailable ({exc}); drew the plain map instead")
+    def tiles_for(view, name: str, max_zoom: int):
+        """The tile image cropped to ``view``, from a cache of its own (None: draw the plain map)."""
+        if trip.map.basemap != "tiles":
+            return None
+        try:
+            from .basemap import crop_and_tone, load_basemap
+
+            x0, x1, y0, y1 = view.extent
+            w, h = x1 - x0, y1 - y0
+            bm = load_basemap(trip_dir, (x0 - 0.05 * w, x1 + 0.05 * w, y0 - 0.05 * h, y1 + 0.05 * h),
+                              trip.map.tile_source, name=name, max_zoom=max_zoom)
+            return crop_and_tone(bm, view.extent, desaturate=0.55, lighten=0.1)
+        except Exception as exc:
+            an.warnings.append(f"map tiles unavailable for {name} ({exc}); drew the plain map instead")
+            return None
+
     figures = []
     for track, day_starts, rest_spans, peaks, sfx in views:
         base_image = None
@@ -126,6 +149,38 @@ def build_report(
             route_map=f"assets/route-map{sfx}.svg", route_map_ratio=map_ratio,
             route_map_under=f"assets/route-map-base{sfx}.jpg" if base_image is not None else None,
             profile=f"assets/elevation-profile{sfx}.svg", profile_ratio=prof_ratio))
+
+    # the optional zoomed-in map: the first figure's track over a smaller window, with sharper tiles of its own
+    if trip.map.detail is not None:
+        d = trip.map.detail
+        track, day_starts, _, peaks, _ = views[0]
+        view = plots.detail_view(track, d.above_m, d.bounds)
+        base_image = tiles_for(view, "basemap-detail", 17)
+        ratio = plots.route_map(track, day_starts, peaks, theme, loc, assets_dir / "route-map-detail.svg",
+                                color_by=trip.map.color_by, label_peaks=trip.map.label_peaks,
+                                base_image=base_image, base_out=assets_dir / "route-map-detail-base.jpg", view=view)
+        figures[0].detail, figures[0].detail_ratio = "assets/route-map-detail.svg", ratio
+        figures[0].detail_under = "assets/route-map-detail-base.jpg" if base_image is not None else None
+
+    # the optional overview: every GPX file together, its tiles cached apart from the per-file map's
+    overview = None
+    if trip.map.overview is not None:
+        if not an.groups:
+            an.warnings.append("map.overview needs several GPX files with figures; left out")
+        else:
+            view = plots.map_view(an.track)
+            base_image = tiles_for(view, "basemap-overview", 16)
+            ratio = plots.route_map(an.track, an.day_start_idx, an.peaks, theme, loc,
+                                    assets_dir / "route-map-overview.svg", color_by=trip.map.color_by,
+                                    label_peaks=trip.map.label_peaks, base_image=base_image,
+                                    base_out=assets_dir / "route-map-overview-base.jpg", view=view)
+            prof = plots.elevation_profile(an.track, an.rest_spans, an.peaks, theme, loc,
+                                           assets_dir / "elevation-profile-overview.svg",
+                                           rest_labels=label_rests(trip, an.rest_spans), height_ratio=0.35)
+            overview = GroupFigures(
+                route_map="assets/route-map-overview.svg", route_map_ratio=ratio,
+                route_map_under="assets/route-map-overview-base.jpg" if base_image is not None else None,
+                profile="assets/elevation-profile-overview.svg", profile_ratio=prof)
 
     alt_file, alt_ratio = None, 0.0
     if an.expedition:
@@ -148,8 +203,9 @@ def build_report(
                     route_map=first.route_map, route_map_ratio=first.route_map_ratio,
                     route_map_under=first.route_map_under, map_attribution=map_note,
                     profile=first.profile, profile_ratio=first.profile_ratio,
-                    acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos,
-                    groups=figures if an.groups else [], alt_chart=alt_file, alt_chart_ratio=alt_ratio)
+                    detail=first.detail, detail_ratio=first.detail_ratio, detail_under=first.detail_under,
+                    acc=acc_file, acc_ratio=acc_ratio, acc_delta_m=acc_delta, photos=photos, topos=topos,
+                    groups=figures if an.groups else [], overview=overview, alt_chart=alt_file, alt_chart_ratio=alt_ratio)
     doc = build_document(trip, an, assets, theme, lang)
     (build_dir / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     render_pdf(doc, out_pdf, build_dir)
