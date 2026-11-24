@@ -79,6 +79,7 @@ Names are never translated: Col du Midi, Adlerpass and Glacier du Géant stay as
 | buttress | kontraforsas | | Ž. |
 | face, wall | siena | | Ž: steeper than about 60°. A face by compass side takes the adjective: "šiaurinė siena" (not "Šiaurės siena"), corrected by the user. |
 | slope | šlaitas | | Ž. |
+| compass side of a face, ridge, couloir, slope | adjective: šiaurinė siena, rytinė ketera, pietvakarinis kuluaras, pietrytinis šlaitas, šiaurės vakarinė pusė | genitive: *ntk.* šiaurės siena, rytų ketera, pietvakarių kuluaras | User. A direction as an adverb keeps the noun: "į rytus", "į šiaurės rytus". |
 | couloir, gully | kuluaras | | Ž. |
 | step in a ridge | laiptas; a small one: laiptelis | | Ž. E.g. "uolų laiptas", "ledo laiptelis". |
 | gendarme | žandaras | vienuolis (*žod.*) | Ž marks žandaras *ntk.*, but climbers say it. **?** |

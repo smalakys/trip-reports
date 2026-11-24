@@ -26,6 +26,11 @@ no Lithuanian climber would write.
   so they can be settled.
 - A term that is not in the file: do not invent or translate one. Ask, then add the term to the file
   in its group, with its source and a **?** mark if it is not confirmed.
+- A compass side that describes a face, ridge, couloir or slope is an adjective, not a genitive:
+  "šiaurinė siena", "rytinė ketera", "pietvakarinis kuluaras", "pietrytinis šlaitas" (not "šiaurės siena",
+  "rytų ketera"). A direction of travel stays a noun: "į rytus", "į šiaurės rytus".
+- Captions and any new text must use the same word as the report's existing text for the same thing
+  ("uolų laiptas", "ledo laiptas", "luitas", "atšaka", "stotis"): read the trip's text before you write a caption.
 - Names are never translated (Col du Midi, Adlerpass, Glacier du Géant), even where the common noun has
   an entry.
 - When a term is corrected, update `docs/terminology-lt.md` in the same change, so the correction holds
